@@ -12,8 +12,8 @@ server = Flask(__name__)
 TOKEN = '8760453840:AAEjCAOwtGZ-d8xGiIpaZ5xQ2MmeDasYZpI'
 bot = telebot.TeleBot(TOKEN)
 
-# Tekshirish uchun kanal username'i (Boshidagi @ belgisiz yoziladi)
-KANAL_USERNAME = "ProVera_Design"  
+# 🚀 SIZNING HAQIQIY PORTFOLIO KANALINGIZ HAVOLASI (Boshidagi @ belgisiz)
+KANAL_USERNAME = "ProVera_Design_Portfolio"  
 
 # Guruh ID raqami (Buyurtmalar tushadigan joy)
 ADMIN_CHAT_ID = "-1003997246734"  
@@ -22,14 +22,14 @@ user_data = {}
 
 def check_sub(user_id):
     try:
-        # Sinalgan va 100% ishlaydigan username orqali tekshirish usuli
+        # Haqiqiy portfolio kanalingiz orqali a'zolikni tekshirish
         member = bot.get_chat_member(f"@{KANAL_USERNAME}", user_id)
         if member.status in ['member', 'administrator', 'creator']:
             return True
         return False
     except Exception as e:
         print(f"Tekshirishda xato: {e}")
-        # Agar bot kanalda admin bo'lmasa yoki xato bersa, foydalanuvchi bloklanib qolmasligi uchun True qaytaramiz
+        # Agar qandaydir texnik uzilish bo'lsa, mijoz bloklanib qolmasligi uchun True qaytaramiz
         return True
 
 def bosh_menyu(message):
