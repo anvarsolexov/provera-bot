@@ -8,7 +8,7 @@ import re
 # Render veb-serveri
 server = Flask(__name__)
 
-# Siz taqdim etgan token va ma'lumotlar
+# Sizning tokeningiz
 TOKEN = '8760453840:AAEjCAOwtGZ-d8xGiIpaZ5xQ2MmeDasYZpI'
 bot = telebot.TeleBot(TOKEN)
 
@@ -85,7 +85,6 @@ def handle_text(message):
         send_welcome(message)
         return
 
-    # Har qanday holatda bekor qilish tugmasi birinchi ishlaydi
     if message.text == "❌ Buyurtmani bekor qilish":
         if user_id in user_data:
             del user_data[user_id]
@@ -93,12 +92,10 @@ def handle_text(message):
         bosh_menyu(message)
         return
 
-    # Agar foydalanuvchi buyurtma berish jarayonida bo'lsa
     if user_id in user_data and message.text != "✍️ Onlayn Buyurtma berish":
         process_order_steps(message)
         return
 
-    # Asosiy Menyular Navigatsiyasi
     if message.text == "📱 Ilovani yuklab olish":
         bot.send_message(message.chat.id, "Ilovani yuklab olish uchun havola: https://share.google/yYkrudNSAmI7V...")
         
@@ -144,19 +141,18 @@ def handle_text(message):
         markup_aloqa.add(btn_new_order, btn_back)
         
         inline_markup = types.InlineKeyboardMarkup()
-        # Inline tugmadagi link ham yangi username ga moslab to'g'rilandi
         url_button = types.InlineKeyboardButton(text="✍️ Logomasterga yozish", url="https://t.me/ProVeraDesign_Admin")
         inline_markup.add(url_button)
         
-        # Username so'ralganidek @ProVeraDesign_Admin ko'rinishiga keltirildi:
+        # Diqqat: Markdown xatolarini oldini olish uchun aloqa_matni oddiy matn ko'rinishiga o'tkazildi
         aloqa_matni = (
-            "📞 *Biz bilan bog'lanish:*\n\n"
-            "Pastdagi *'✍️ Onlayn Buyurtma berish'* tugmasini bosib, bot orqali tezkor buyurtma qoldirishingiz mumkin.\n\n"
+            "📞 Biz bilan bog'lanish:\n\n"
+            "Pastdagi '✍️ Onlayn Buyurtma berish' tugmasini bosib, bot orqali tezkor buyurtma qoldirishingiz mumkin.\n\n"
             "Yoki to'g'ridan-to'g'ri admin bilan bog'laning:\n"
-            "📱 *Telefon:* +998200271779 | +998200057207\n"
-            "🤖 *Telegram:* @ProVeraDesign_Admin"
+            "📱 Telefon: +998200271779 | +998200057207\n"
+            "🤖 Telegram: @ProVeraDesign_Admin"
         )
-        bot.send_message(message.chat.id, aloqa_matni, parse_mode="Markdown", reply_markup=markup_aloqa)
+        bot.send_message(message.chat.id, aloqa_matni, reply_markup=markup_aloqa)
         bot.send_message(message.chat.id, "Admin bilan to'g'ridan-to'g'ri suhbat ochish:", reply_markup=inline_markup)
 
     elif message.text == "✍️ Onlayn Buyurtma berish":
@@ -177,7 +173,6 @@ def handle_text(message):
     else:
         bot.send_message(message.chat.id, "⚠️ *Noto'g'ri buyruq!* Iltimos, pastdagi tayyor menyu tugmalaridan birini bosing. 👇", parse_mode="Markdown")
 
-# Anketa bosqichlarini xatoliklardan himoya qilib boshqarish
 def process_order_steps(message):
     user_id = message.from_user.id
     current_step = user_data[user_id]['step']
