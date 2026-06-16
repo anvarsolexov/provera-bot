@@ -141,7 +141,7 @@ def handle_text(message):
             "Pastdagi *'✍️ Onlayn Buyurtma berish'* tugmasini bosib, bot orqali tezkor buyurtma qoldirishingiz mumkin.\n\n"
             "Yoki to'g'ridan-to'g'ri admin bilan bog'laning:\n"
             "📱 *Telefon:* +998200271779 | +998200057207\n"
-            "🤖 *Telegram:* @ProVera_Design_Admin"
+            "🤖 *Telegram:* @ProVera_Admin"
         )
         bot.send_message(message.chat.id, aloqa_matni, parse_mode="Markdown", reply_markup=markup_aloqa)
         bot.send_message(message.chat.id, "Admin bilan to'g'ridan-to'g'ri suhbat ochish:", reply_markup=inline_markup)
