@@ -12,27 +12,28 @@ server = Flask(__name__)
 TOKEN = '8760453840:AAEjCAOwtGZ-d8xGiIpaZ5xQ2MmeDasYZpI'
 bot = telebot.TeleBot(TOKEN)
 
-# 📢 MAJBURIY OBUNA KANALI (Botdan foydalanish uchun)
-MAJBURIY_KANAL = "ProVera_Design"  
+# 📢 MAJBURIY OBUNA SOZLAMALARI (Yopiq kanal uchun yangilandi)
+MAJBURIY_KANAL_ID = "-1002110067719"  # Siz yuborgan yangi kanal ID si
+MAJBURIY_KANAL_LINK = "https://t.me/+UINPPxH9yas4ZDZi"  # Taklif havolasi
 
 # 📂 PORTFOLIO KANALI (Ishlarni ko'rish uchun)
 PORTFOLIO_KANAL = "ProVera_Design_Portfolio"  
 
-# Guruh ID raqami (Buyurtmalar tushadigan joy)
+# Guruh ID raqami (Buyurtmalar tushadigan guruh)
 ADMIN_CHAT_ID = "-1003997246734"  
 
 user_data = {}
 
 def check_sub(user_id):
     try:
-        # Majburiy obuna kanalini tekshirish (@ProVera_Design)
-        member = bot.get_chat_member(f"@{MAJBURIY_KANAL}", user_id)
+        # Yangi ID orqali a'zolikni tekshirish
+        member = bot.get_chat_member(MAJBURIY_KANAL_ID, user_id)
         if member.status in ['member', 'administrator', 'creator']:
             return True
         return False
     except Exception as e:
         print(f"Tekshirishda xato: {e}")
-        # Agar texnik xatolik bo'lsa, foydalanuvchi bloklanib qolmasligi uchun True qaytaramiz
+        # Texnik xatolik yuz bersa, foydalanuvchi qolib ketmasligi uchun True qaytaramiz
         return True
 
 def bosh_menyu(message):
@@ -65,14 +66,14 @@ def send_welcome(message):
         bosh_menyu(message)
     else:
         inline_markup = types.InlineKeyboardMarkup()
-        btn_kanal = types.InlineKeyboardButton(text="📢 Kanalga a'zo bo'lish", url=f"https://t.me/{MAJBURIY_KANAL}")
+        btn_kanal = types.InlineKeyboardButton(text="📢 Kanalga a'zo bo'lish", url=MAJBURIY_KANAL_LINK)
         btn_check = types.InlineKeyboardButton(text="✅ Tekshirish", callback_data="check_subscription")
         inline_markup.add(btn_kanal)
         inline_markup.add(btn_check)
         
         bot.send_message(
             message.chat.id, 
-            f"👋 Assalomu aleykum!\n\nBotdan to'liq foydalanish uchun iltimos birinchi bo'lib rasmiy @{MAJBURIY_KANAL} kanalimizga a'zo bo'ling. 👇", 
+            "👋 Assalomu aleykum!\n\nBotdan to'liq foydalanish uchun iltimos birinchi bo'lib rasmiy kanalimizga a'zo bo'ling. 👇", 
             reply_markup=inline_markup
         )
 
@@ -150,7 +151,6 @@ def handle_text(message):
         
     elif message.text == "📂 Portfolio (Bizning ishlar)":
         inline_portfolio = types.InlineKeyboardMarkup(row_width=1)
-        # Tugma bosilganda Portfolio kanaliga yo'naltiradi (@ProVera_Design_Portfolio)
         btn_kanal = types.InlineKeyboardButton(text="🎨 Portfolioni ko'rish (Kanal)", url=f"https://t.me/{PORTFOLIO_KANAL}")
         inline_portfolio.add(btn_kanal)
         
