@@ -12,20 +12,24 @@ server = Flask(__name__)
 TOKEN = '8760453840:AAEjCAOwtGZ-d8xGiIpaZ5xQ2MmeDasYZpI'
 bot = telebot.TeleBot(TOKEN)
 
+# Kanalingizning linki va yangi ID raqami 🚀
 KANAL_USERNAME = "@ProVera_Design"
+KANAL_CHAT_ID = "-1004449377008"  # Siz olgan yangi kanal ID si qulflandi!
 
-# Xavfsizlik uchun guruh ID raqami matn (string) ko'rinishiga o'tkazildi 🚀
+# Guruh ID raqami
 ADMIN_CHAT_ID = "-1003997246734"  
 
 user_data = {}
 
 def check_sub(user_id):
     try:
-        member = bot.get_chat_member(KANAL_USERNAME, user_id)
+        # Endi tekshiruv username orqali emas, qat'iy kanal ID si orqali bo'ladi (Eng xavfsiz yo'li)
+        member = bot.get_chat_member(KANAL_CHAT_ID, user_id)
         if member.status in ['member', 'administrator', 'creator']:
             return True
         return False
     except Exception:
+        # Agar qandaydir sabab bilan tizim uzilib qolsa, bot bloklanib qolmasligi uchun True qaytaradi
         return True
 
 def bosh_menyu(message):
@@ -139,10 +143,17 @@ def handle_text(message):
         bot.send_message(message.chat.id, narxlar_matni, parse_mode="Markdown")
         
     elif message.text == "📂 Portfolio (Bizning ishlar)":
-        inline_portfolio = types.InlineKeyboardMarkup()
-        btn_port = types.InlineKeyboardButton(text="🎨 Portfolioni ko'rish (Kanal)", url=f"https://t.me/{KANAL_USERNAME[1:]}")
-        inline_portfolio.add(btn_port)
-        bot.send_message(message.chat.id, "🎨 *Bizning eng sara ishlarimiz bilan kanalda tanishishingiz mumkin:*", parse_mode="Markdown", reply_markup=inline_portfolio)
+        inline_portfolio = types.InlineKeyboardMarkup(row_width=1)
+        btn_kanal = types.InlineKeyboardButton(text="🎨 Portfolioni ko'rish (Kanal)", url=f"https://t.me/{KANAL_USERNAME[1:]}")
+        inline_portfolio.add(btn_kanal)
+        
+        portfolio_matni = (
+            "📂 *ProVera Design — Bizning ishlarimiz bilan tanishing!*\n\n"
+            "Biz yaratgan eng sara logotiplar, SMM dizaynlar va brending loyihalarini "
+            "rasmiy kanalimiz orqali to'g'ridan-to'g'ri kuzatishingiz mumkin. 👇\n\n"
+            "💡 _Kanalda ishlarni oson topish uchun #logo, #smm heshteglaridan foydalaning._"
+        )
+        bot.send_message(message.chat.id, portfolio_matni, parse_mode="Markdown", reply_markup=inline_portfolio)
         
     elif message.text == "📞 Buyurtma berish / Aloqa":
         markup_aloqa = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -245,7 +256,7 @@ def finish_order(message, user_id):
     
     try:
         bot.send_message(ADMIN_CHAT_ID, admin_matn)
-        bot.send_message(message.chat.id, "🎉 Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi.\n\nTez orada loyiha menejerlarimiz siz bilan bog'lanishadi.")
+        bot.send_message(message.chat.id, "🎉 Rahmat! Buyurtmangiz muvaffaqiyatli qabul kijindi.\n\nTez orada loyiha menejerlarimiz siz bilan bog'lanishadi.")
     except Exception as e:
         xato_xabar = f"⚠️ Tizimda xatolik! Guruhga xabar ketmadi.\nXatolik: {str(e)}"
         bot.send_message(message.chat.id, xato_xabar)
@@ -263,7 +274,6 @@ def run_bot():
     bot.infinity_polling(timeout=10, long_polling_timeout=5)
 
 if __name__ == "__main__":
-    # Render poller qotib qolmasligi uchun xavfsiz threading sozlamasi
     threading.Thread(target=run_bot, daemon=True).start()
     port = int(os.environ.get("PORT", 5000))
     server.run(host="0.0.0.0", port=port)
