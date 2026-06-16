@@ -212,4 +212,55 @@ def process_order_steps(message):
         btn_cancel = types.KeyboardButton("❌ Buyurtmani bekor qilish")
         markup_phone.add(btn_phone, btn_cancel)
         
-        bot.send_message(message.chat.id, "📞 *3-Bosqich:* Telefon raqamingizni kiriting (Masalan: +998901234567) yoki past
+        bot.send_message(message.chat.id, "📞 *3-Bosqich:* Telefon raqamingizni kiriting (Masalan: +998901234567) yoki pastdagi tugma orqali yuboring:", parse_mode="Markdown", reply_markup=markup_phone)
+
+    elif current_step == 3:
+        clean_phone = re.sub(r'[^\d+]', '', text)
+        if len(clean_phone) < 9:
+            bot.send_message(message.chat.id, "❌ *Noto'g'ri telefon raqami!* Iltimos, raqamingizni to'g'ri formatda kiriting yoki pastdagi tugmani bosing:")
+            return
+            
+        user_data[user_id]['phone'] = clean_phone
+        finish_order(message, user_id)
+
+@bot.message_handler(content_types=['photo', 'document', 'audio', 'video'])
+def handle_other_contents(message):
+    bot.send_message(message.chat.id, "⚠️ *Kutilmagan fayl yoki rasm!* Iltimos, faqat menyudagi tugmalardan foydalaning.")
+
+def finish_order(message, user_id):
+    name = user_data[user_id]['name']
+    service = user_data[user_id]['service']
+    phone = user_data[user_id]['phone']
+    
+    raw_username = message.from_user.username
+    username_text = f"@{raw_username}" if raw_username else "Mavjud emas"
+    
+    admin_matn = (
+        "🔥 YANGI BUYURTMA KELDI! 🔥\n\n"
+        f"👤 Mijoz: {name}\n"
+        f"💼 Xizmat turi: {service}\n"
+        f"📞 Telefon: {phone}\n"
+        f"🤖 Telegram profili: {username_text}\n"
+    )
+    
+    try:
+        # Yangi guruh ID raqamiga xavfsiz (oddiy matn) ko'rinishida yuborish
+        bot.send_message(ADMIN_CHAT_ID, admin_matn)
+        bot.send_message(message.chat.id, "🎉 Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi.\n\nTez orada loyiha menejerlarimiz siz bilan bog'lanishadi.")
+    except Exception as e:
+        # Agar yana qandaydir muammo chiqsa (masalan bot guruhda admin bo'lmasa) xatoni ko'rsatadi
+        xato_xabar = f"⚠️ Tizimda xatolik! Guruhga xabar ketmadi.\n\nXatolik sababi: {str(e)}"
+        bot.send_message(message.chat.id, xato_xabar)
+        print(f"Xatolik tafsiloti: {e}")
+        
+    if user_id in user_data:
+        del user_data[user_id]
+    bosh_menyu(message)
+
+@server.route('/')
+def webhook():
+    return "ProVera bot is running 24/7!", 200
+
+if __name__ == "__main__":
+    threading.Thread(target=bot.infinity_polling).start()
+    port = int(os.
