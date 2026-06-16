@@ -140,12 +140,10 @@ def handle_text(message):
         btn_back = types.KeyboardButton("⬅️ Orqaga (Bosh menyu)")
         markup_aloqa.add(btn_new_order, btn_back)
         
-        # Inline tugmadagi havola mutlaqo to'g'ri ko'rinishga keltirildi
         inline_markup = types.InlineKeyboardMarkup()
         url_button = types.InlineKeyboardButton(text="✍️ Logomasterga yozish", url="https://t.me/ProVera_Design_Admin")
         inline_markup.add(url_button)
         
-        # To'g'ri username kiritildi, pastki chiziq xato bermasligi uchun bu xabardan parse_mode olib tashlandi
         aloqa_matni = (
             "📞 Biz bilan bog'lanish:\n\n"
             "Pastdagi '✍️ Onlayn Buyurtma berish' tugmasini bosib, bot orqali tezkor buyurtma qoldirishingiz mumkin.\n\n"
@@ -227,26 +225,30 @@ def handle_other_contents(message):
     else:
         bot.send_message(message.chat.id, "⚠️ *Kutilmagan fayl yoki rasm!* Iltimos, faqat menyudagi tugmalardan foydalaning.")
 
+# 🛠 BUYURTMANI GURUHGA HTML FORMATDA XAVFSIZ YUBORISH
 def finish_order(message, user_id):
     name = user_data[user_id]['name']
     service = user_data[user_id]['service']
     phone = user_data[user_id]['phone']
     username = f"@{message.from_user.username}" if message.from_user.username else "Mavjud emas"
     
+    # Guruhga yuboriladigan xabar Markdown'dan HTML formatiga o'tkazildi. 
+    # Bu format chiziqchalardan ('_') umuman qo'rqmaydi!
     admin_matn = (
-        "🔥 *YANGI BUYURTMA KELDI!* 🔥\n\n"
-        f"👤 *Mijoz:* {name}\n"
-        f"💼 *Xizmat turi:* {service}\n"
-        f"📞 *Telefon:* {phone}\n"
-        f"🤖 *Telegram profili:* {username}\n"
+        "<b>🔥 YANGI BUYURTMA KELDI! 🔥</b>\n\n"
+        f"<b>👤 Mijoz:</b> {name}\n"
+        f"<b>💼 Xizmat turi:</b> {service}\n"
+        f"<b>📞 Telefon:</b> {phone}\n"
+        f"<b>🤖 Telegram profili:</b> {username}\n"
     )
     
     try:
-        bot.send_message(ADMIN_CHAT_ID, admin_matn, parse_mode="Markdown")
-        bot.send_message(message.chat.id, "🎉 *Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi.*\n\nTez orada loyiha menejerlarimiz siz bilan bog'lanishadi.", parse_mode="Markdown")
+        # parse_mode="HTML" qilib o'zgartirildi
+        bot.send_message(ADMIN_CHAT_ID, admin_matn, parse_mode="HTML")
+        bot.send_message(message.chat.id, "🎉 <b>Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi.</b>\n\nTez orada loyiha menejerlarimiz siz bilan bog'lanishadi.", parse_mode="HTML")
     except Exception as e:
         bot.send_message(message.chat.id, "⚠️ Tizimda kichik xatolik yuz berdi. Guruhga buyurtma jo'natib bo'lmadi.")
-        print(f"Xatolik: {e}")
+        print(f"Xatolik yuz berdi: {e}")
         
     if user_id in user_data:
         del user_data[user_id]
