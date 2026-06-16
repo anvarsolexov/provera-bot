@@ -14,7 +14,7 @@ bot = telebot.TeleBot(TOKEN)
 
 KANAL_USERNAME = "@ProVera_Design"
 
-# Yangilangan guruh ID raqami joylashtirildi 🚀
+# Yangi guruh ID raqami qat'iy son ko'rinishida o'rnatildi
 ADMIN_CHAT_ID = -1003997246734  
 
 user_data = {}
@@ -244,12 +244,11 @@ def finish_order(message, user_id):
     )
     
     try:
-        # Yangi guruh ID raqamiga xavfsiz (oddiy matn) ko'rinishida yuborish
+        # Hech qanday parse_mode-siz eng xavfsiz holatda yuborish
         bot.send_message(ADMIN_CHAT_ID, admin_matn)
         bot.send_message(message.chat.id, "🎉 Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi.\n\nTez orada loyiha menejerlarimiz siz bilan bog'lanishadi.")
     except Exception as e:
-        # Agar yana qandaydir muammo chiqsa (masalan bot guruhda admin bo'lmasa) xatoni ko'rsatadi
-        xato_xabar = f"⚠️ Tizimda xatolik! Guruhga xabar ketmadi.\n\nXatolik sababi: {str(e)}"
+        xato_xabar = f"⚠️ Tizimda xatolik! Guruhga xabar ketmadi.\nXatolik: {str(e)}"
         bot.send_message(message.chat.id, xato_xabar)
         print(f"Xatolik tafsiloti: {e}")
         
@@ -263,4 +262,5 @@ def webhook():
 
 if __name__ == "__main__":
     threading.Thread(target=bot.infinity_polling).start()
-    port = int(os.
+    port = int(os.environ.get("PORT", 5000))
+    server.run(host="0.0.0.0", port=port)
