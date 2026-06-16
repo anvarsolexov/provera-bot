@@ -140,17 +140,18 @@ def handle_text(message):
         btn_back = types.KeyboardButton("⬅️ Orqaga (Bosh menyu)")
         markup_aloqa.add(btn_new_order, btn_back)
         
+        # Inline tugmadagi havola mutlaqo to'g'ri ko'rinishga keltirildi
         inline_markup = types.InlineKeyboardMarkup()
-        url_button = types.InlineKeyboardButton(text="✍️ Logomasterga yozish", url="https://t.me/ProVeraDesign_Admin")
+        url_button = types.InlineKeyboardButton(text="✍️ Logomasterga yozish", url="https://t.me/ProVera_Design_Admin")
         inline_markup.add(url_button)
         
-        # Diqqat: Markdown xatolarini oldini olish uchun aloqa_matni oddiy matn ko'rinishiga o'tkazildi
+        # To'g'ri username kiritildi, pastki chiziq xato bermasligi uchun bu xabardan parse_mode olib tashlandi
         aloqa_matni = (
             "📞 Biz bilan bog'lanish:\n\n"
             "Pastdagi '✍️ Onlayn Buyurtma berish' tugmasini bosib, bot orqali tezkor buyurtma qoldirishingiz mumkin.\n\n"
             "Yoki to'g'ridan-to'g'ri admin bilan bog'laning:\n"
             "📱 Telefon: +998200271779 | +998200057207\n"
-            "🤖 Telegram: @ProVeraDesign_Admin"
+            "🤖 Telegram: @ProVera_Design_Admin"
         )
         bot.send_message(message.chat.id, aloqa_matni, reply_markup=markup_aloqa)
         bot.send_message(message.chat.id, "Admin bilan to'g'ridan-to'g'ri suhbat ochish:", reply_markup=inline_markup)
