@@ -10,12 +10,22 @@ server = Flask(__name__)
 TOKEN = '8760453840:AAEjCAOwtGZ-d8xGiIpaZ5xQ2MmeDasYZpI'
 bot = telebot.TeleBot(TOKEN)
 
-# /start buyrug'i kelganda bosh menyu
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
+KANAL_USERNAME = "@ProVera_Design"  # Sizning kanalingiz
+
+# Foydalanuvchi kanalga a'zo bo'lganini tekshirish funksiyasi
+def check_sub(user_id):
+    try:
+        member = bot.get_chat_member(KANAL_USERNAME, user_id)
+        if member.status in ['member', 'administrator', 'creator']:
+            return True
+        return False
+    except Exception:
+        # Agar bot kanalda admin bo'lmasa yoki xatolik bo'lsa, foydalanuvchini o'tkazib yuboradi
+        return True
+
+# Bosh menyuni chiqarish funksiyasi
+def bosh_menyu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    
-    # Tugmalar
     btn1 = types.KeyboardButton("📱 Ilovani yuklab olish")
     btn2 = types.KeyboardButton("💰 Xizmatlar va Narxlar")
     btn3 = types.KeyboardButton("📂 Portfolio (Bizning ishlar)")
@@ -23,20 +33,54 @@ def send_welcome(message):
     btn5 = types.KeyboardButton("🔍 Tekshirish (Provera)")
     btn6 = types.KeyboardButton("ℹ️ Yordam")
     
-    # Tugmalarni joylashtirish
-    markup.add(btn1, btn2)       # Ilova va Narxlar yonma-yon
-    markup.add(btn3, btn4)       # Portfolio va Aloqa yonma-yon
-    markup.add(btn5, btn6)       # Tekshirish va Yordam yonma-yon
+    markup.add(btn1, btn2)
+    markup.add(btn3, btn4)
+    markup.add(btn5, btn6)
     
     bot.send_message(
         message.chat.id, 
-        "Assalomu aleykum! ProVera botiga qayta xush kelibsiz!\nKerakli bo'limni tanlang 👇", 
+        "ProVera botining asosiy menyusi. Kerakli bo'limni tanlang 👇", 
         reply_markup=markup
     )
+
+# /start buyrug'i kelganda
+@bot.message_handler(commands=['start'])
+def send_welcome(message):
+    if check_sub(message.from_user.id):
+        bot.send_message(message.chat.id, "Assalomu aleykum! ProVera botiga qayta xush kelibsiz!")
+        bosh_menyu(message)
+    else:
+        # Kanalga a'zo bo'lishni so'rash
+        inline_markup = types.InlineKeyboardMarkup()
+        btn_kanal = types.InlineKeyboardButton(text="📢 Kanalga a'zo bo'lish", url=f"https://t.me/{KANAL_USERNAME[1:]}")
+        btn_check = types.InlineKeyboardButton(text="✅ Tekshirish", callback_data="check_subscription")
+        inline_markup.add(btn_kanal)
+        inline_markup.add(btn_check)
+        
+        bot.send_message(
+            message.chat.id, 
+            "👋 Assalomu aleykum!\n\nBotdan to'liq foydalanish uchun iltimos birinchi bo'lib rasmiy kanalimizga a'zo bo'ling. 👇", 
+            reply_markup=inline_markup
+        )
+
+# Inline tugmalar bosilganda (Tekshirish tugmasi uchun)
+@bot.callback_query_handler(func=lambda call: call.data == "check_subscription")
+def callback_check(call):
+    if check_sub(call.from_user.id):
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        bot.send_message(call.message.chat.id, "🎉 Rahmat! Obuna tasdiqlandi.")
+        bosh_menyu(call.message)
+    else:
+        bot.answer_callback_query(call.id, "❌ Siz hali kanalga a'zo bo'lmadingiz. Iltimos, oldin a'zo bo'ling!", show_alert=True)
 
 # Matnli xabarlarni qayta ishlash
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
+    # Har bir tugma bosilganda ham obunani tekshiramiz
+    if not check_sub(message.from_user.id):
+        send_welcome(message)
+        return
+
     if message.text == "📱 Ilovani yuklab olish":
         bot.send_message(message.chat.id, "Ilovani yuklab olish uchun havola: https://share.google/yYkrudNSAmI7V...")
         
@@ -71,15 +115,21 @@ def handle_text(message):
         bot.send_message(message.chat.id, narxlar_matni, parse_mode="Markdown")
         
     elif message.text == "📂 Portfolio (Bizning ishlar)":
-        bot.send_message(message.chat.id, "🎨 *Bizning eng sara ishlarimiz:* \n\nTez orada bu yerga rasmlar va havolalar joylanadi. Hozircha namunalar yuklanmoqda...", parse_mode="Markdown")
+        inline_portfolio = types.InlineKeyboardMarkup()
+        btn_port = types.InlineKeyboardButton(text="🎨 Portfolioni ko'rish (Kanal)", url=f"https://t.me/{KANAL_USERNAME[1:]}")
+        inline_portfolio.add(btn_port)
+        bot.send_message(
+            message.chat.id, 
+            "🎨 *Bizning eng sara ishlarimiz bilan kanalda tanishishingiz mumkin:*", 
+            parse_mode="Markdown", 
+            reply_markup=inline_portfolio
+        )
         
     elif message.text == "📞 Buyurtma berish / Aloqa":
-        # Inline tugma - siz kiritgan @ProVera_Design_Admin profiliga olib boradi
         inline_markup = types.InlineKeyboardMarkup()
         url_button = types.InlineKeyboardButton(text="✍️ Logomasterga yozish", url="https://t.me/ProVera_Design_Admin")
         inline_markup.add(url_button)
         
-        # Sizning aniq raqamlaringiz va profilingiz joyida qoldi
         aloqa_matni = (
             "📞 *Biz bilan bog'lanish:*\n\n"
             "Savollar, takliflar yoki buyurtmalar bo'yicha to'g'ridan-to'g'ri admin bilan bog'lanishingiz mumkin.\n\n"
@@ -93,20 +143,14 @@ def handle_text(message):
         
     elif message.text == "🔍 Tekshirish (Provera)":
         bot.send_message(message.chat.id, "Tekshirish tizimi ishga tushdi...")
-        
     else:
         bot.send_message(message.chat.id, "Iltimos, pastdagi tayyor tugmalardan birini bosing. 👇")
 
-# Render ping qila olishi uchun bosh sahifa
 @server.route('/')
 def webhook():
     return "ProVera bot is running 24/7!", 200
 
 if __name__ == "__main__":
-    # Botni alohida potokda (thread) polling qildiramiz
     threading.Thread(target=bot.infinity_polling).start()
-    
-    # Render portini aniqlab veb-serverni ishga tushiramiz
     port = int(os.environ.get("PORT", 5000))
-    print(f"ProVera boti to'liq ma'lumotlar bilan {port}-portda ishga tushdi...")
     server.run(host="0.0.0.0", port=port)
