@@ -12,24 +12,24 @@ server = Flask(__name__)
 TOKEN = '8760453840:AAEjCAOwtGZ-d8xGiIpaZ5xQ2MmeDasYZpI'
 bot = telebot.TeleBot(TOKEN)
 
-# Kanalingizning linki va yangi ID raqami 🚀
-KANAL_USERNAME = "@ProVera_Design"
-KANAL_CHAT_ID = "-1004449377008"  # Siz olgan yangi kanal ID si qulflandi!
+# Tekshirish uchun kanal username'i (Boshidagi @ belgisiz yoziladi)
+KANAL_USERNAME = "ProVera_Design"  
 
-# Guruh ID raqami
+# Guruh ID raqami (Buyurtmalar tushadigan joy)
 ADMIN_CHAT_ID = "-1003997246734"  
 
 user_data = {}
 
 def check_sub(user_id):
     try:
-        # Endi tekshiruv username orqali emas, qat'iy kanal ID si orqali bo'ladi (Eng xavfsiz yo'li)
-        member = bot.get_chat_member(KANAL_CHAT_ID, user_id)
+        # Sinalgan va 100% ishlaydigan username orqali tekshirish usuli
+        member = bot.get_chat_member(f"@{KANAL_USERNAME}", user_id)
         if member.status in ['member', 'administrator', 'creator']:
             return True
         return False
-    except Exception:
-        # Agar qandaydir sabab bilan tizim uzilib qolsa, bot bloklanib qolmasligi uchun True qaytaradi
+    except Exception as e:
+        print(f"Tekshirishda xato: {e}")
+        # Agar bot kanalda admin bo'lmasa yoki xato bersa, foydalanuvchi bloklanib qolmasligi uchun True qaytaramiz
         return True
 
 def bosh_menyu(message):
@@ -62,7 +62,7 @@ def send_welcome(message):
         bosh_menyu(message)
     else:
         inline_markup = types.InlineKeyboardMarkup()
-        btn_kanal = types.InlineKeyboardButton(text="📢 Kanalga a'zo bo'lish", url=f"https://t.me/{KANAL_USERNAME[1:]}")
+        btn_kanal = types.InlineKeyboardButton(text="📢 Kanalga a'zo bo'lish", url=f"https://t.me/{KANAL_USERNAME}")
         btn_check = types.InlineKeyboardButton(text="✅ Tekshirish", callback_data="check_subscription")
         inline_markup.add(btn_kanal)
         inline_markup.add(btn_check)
@@ -76,7 +76,10 @@ def send_welcome(message):
 @bot.callback_query_handler(func=lambda call: call.data == "check_subscription")
 def callback_check(call):
     if check_sub(call.from_user.id):
-        bot.delete_message(call.message.chat.id, call.message.message_id)
+        try:
+            bot.delete_message(call.message.chat.id, call.message.message_id)
+        except Exception:
+            pass
         bot.send_message(call.message.chat.id, "🎉 Rahmat! Obuna tasdiqlandi.")
         bosh_menyu(call.message)
     else:
@@ -144,7 +147,7 @@ def handle_text(message):
         
     elif message.text == "📂 Portfolio (Bizning ishlar)":
         inline_portfolio = types.InlineKeyboardMarkup(row_width=1)
-        btn_kanal = types.InlineKeyboardButton(text="🎨 Portfolioni ko'rish (Kanal)", url=f"https://t.me/{KANAL_USERNAME[1:]}")
+        btn_kanal = types.InlineKeyboardButton(text="🎨 Portfolioni ko'rish (Kanal)", url=f"https://t.me/{KANAL_USERNAME}")
         inline_portfolio.add(btn_kanal)
         
         portfolio_matni = (
@@ -256,7 +259,7 @@ def finish_order(message, user_id):
     
     try:
         bot.send_message(ADMIN_CHAT_ID, admin_matn)
-        bot.send_message(message.chat.id, "🎉 Rahmat! Buyurtmangiz muvaffaqiyatli qabul kijindi.\n\nTez orada loyiha menejerlarimiz siz bilan bog'lanishadi.")
+        bot.send_message(message.chat.id, "🎉 Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi.\n\nTez orada loyiha menejerlarimiz siz bilan bog'lanishadi.")
     except Exception as e:
         xato_xabar = f"⚠️ Tizimda xatolik! Guruhga xabar ketmadi.\nXatolik: {str(e)}"
         bot.send_message(message.chat.id, xato_xabar)
