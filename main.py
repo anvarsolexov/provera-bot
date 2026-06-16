@@ -1,5 +1,11 @@
 import telebot
 from telebot import types
+import os
+from flask import Flask
+import threading
+
+# Renderda xatolik bermasligi uchun veb-server ochamiz
+server = Flask(__name__)
 
 TOKEN = '8760453840:AAEjCAOwtGZ-d8xGiIpaZ5xQ2MmeDasYZpI'
 bot = telebot.TeleBot(TOKEN)
@@ -36,12 +42,31 @@ def handle_text(message):
         
     elif message.text == "💰 Xizmatlar va Narxlar":
         narxlar_matni = (
-            "✨ *ProVera Design xizmatlari va narxlari:* \n\n"
-            "🎨 *Logo yaratish:* \n"
+            "✨ *ProVera Design — Grafik dizayn xizmatlari va narxlari:* \n\n"
+            "🔥 *Asosiy xizmatlarimiz:* \n"
+            "1️⃣ *Logo yaratish (Brending):* \n"
             "└ 50 000 so'mdan — 500 000 so'mgacha\n\n"
-            "📇 *Vizitkalar:* \n"
+            "2️⃣ *Vizitkalar va Korporativ kartalar:* \n"
             "└ 60 000 so'mdan — 800 000 so'mgacha\n\n"
-            "💡 _Narxlar buyurtmaning murakkabligiga qarab o'zgarishi mumkin._"
+            "3️⃣ *Banner, Flayer va Bukletlar (Poligrafiya):* \n"
+            "└ 100 000 so'mdan — 700 000 so'mgacha\n\n"
+            "4️⃣ *SMM postlar va Storizlar uchun dizayn:* \n"
+            "└ 40 000 so'mdan — 300 000 so'mgacha\n\n"
+            "5️⃣ *Tashqi reklama (Bilbord va Vitrina dizayni):* \n"
+            "└ 150 000 so'mdan — 1 200 000 so'mgacha\n\n"
+            "6️⃣ *Sertifikat, Diplom va Taklifnomalar:* \n"
+            "└ 30 000 so'mdan — 250 000 so'mgacha\n\n"
+            "⚙️ *Boshqa barcha turdagi grafik xizmatlar:* \n"
+            "_(Ushbu xizmatlar narxi buyurtma hajmiga qarab individual kelishiladi)_\n"
+            "• Firma stillari (Brandbook) yaratish\n"
+            "• Qadoq va etiketka (Packaging) dizayni\n"
+            "• Kitob, jurnal va kataloglarni sahifalash\n"
+            "• Futbolka, krujka va merch mahsulotlari uchun printlar\n"
+            "• Menu dizayni (Restoran va kafelar uchun)\n"
+            "• Vektorli illyustratsiyalar va chizmalar\n"
+            "• Fotosuratlarni professional retush qilish\n"
+            "• Telegram uchun maxsus rasm va sticker'lar\n\n"
+            "💡 _Eslatma: Yakuniy narx buyurtmaning murakkabligi va muddatiga qarab o'zgarishi mumkin._"
         )
         bot.send_message(message.chat.id, narxlar_matni, parse_mode="Markdown")
         
@@ -49,15 +74,16 @@ def handle_text(message):
         bot.send_message(message.chat.id, "🎨 *Bizning eng sara ishlarimiz:* \n\nTez orada bu yerga rasmlar va havolalar joylanadi. Hozircha namunalar yuklanmoqda...", parse_mode="Markdown")
         
     elif message.text == "📞 Buyurtma berish / Aloqa":
-        # Inline tugma - bosganda to'g'ridan-to'g'ri sizning profilingiz ochiladi
+        # Inline tugma - siz kiritgan @ProVera_Design_Admin profiliga olib boradi
         inline_markup = types.InlineKeyboardMarkup()
         url_button = types.InlineKeyboardButton(text="✍️ Logomasterga yozish", url="https://t.me/ProVera_Design_Admin")
         inline_markup.add(url_button)
         
+        # Sizning aniq raqamlaringiz va profilingiz joyida qoldi
         aloqa_matni = (
             "📞 *Biz bilan bog'lanish:*\n\n"
             "Savollar, takliflar yoki buyurtmalar bo'yicha to'g'ridan-to'g'ri admin bilan bog'lanishingiz mumkin.\n\n"
-            "📱 *Telefon:* +998200271779 +998200057207\n"  # Bu yerga o'z raqamingizni yozib qo'yishingiz mumkin
+            "📱 *Telefon:* +998200271779 | +998200057207\n"
             "🤖 *Telegram:* @ProVera_Design_Admin"
         )
         bot.send_message(message.chat.id, aloqa_matni, parse_mode="Markdown", reply_markup=inline_markup)
@@ -71,6 +97,16 @@ def handle_text(message):
     else:
         bot.send_message(message.chat.id, "Iltimos, pastdagi tayyor tugmalardan birini bosing. 👇")
 
-# Botni ishga tushirish
-print("ProVera boti to'liq ma'lumotlar bilan ishga tushdi...")
-bot.infinity_polling()
+# Render ping qila olishi uchun bosh sahifa
+@server.route('/')
+def webhook():
+    return "ProVera bot is running 24/7!", 200
+
+if __name__ == "__main__":
+    # Botni alohida potokda (thread) polling qildiramiz
+    threading.Thread(target=bot.infinity_polling).start()
+    
+    # Render portini aniqlab veb-serverni ishga tushiramiz
+    port = int(os.environ.get("PORT", 5000))
+    print(f"ProVera boti to'liq ma'lumotlar bilan {port}-portda ishga tushdi...")
+    server.run(host="0.0.0.0", port=port)
