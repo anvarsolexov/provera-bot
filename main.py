@@ -14,8 +14,8 @@ bot = telebot.TeleBot(TOKEN)
 
 KANAL_USERNAME = "@ProVera_Design"
 
-# Yangi guruh ID raqami qat'iy son ko'rinishida o'rnatildi
-ADMIN_CHAT_ID = -1003997246734  
+# Xavfsizlik uchun guruh ID raqami matn (string) ko'rinishiga o'tkazildi 🚀
+ADMIN_CHAT_ID = "-1003997246734"  
 
 user_data = {}
 
@@ -244,13 +244,12 @@ def finish_order(message, user_id):
     )
     
     try:
-        # Hech qanday parse_mode-siz eng xavfsiz holatda yuborish
         bot.send_message(ADMIN_CHAT_ID, admin_matn)
         bot.send_message(message.chat.id, "🎉 Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi.\n\nTez orada loyiha menejerlarimiz siz bilan bog'lanishadi.")
     except Exception as e:
         xato_xabar = f"⚠️ Tizimda xatolik! Guruhga xabar ketmadi.\nXatolik: {str(e)}"
         bot.send_message(message.chat.id, xato_xabar)
-        print(f"Xatolik tafsiloti: {e}")
+        print(f"Xatolik: {e}")
         
     if user_id in user_data:
         del user_data[user_id]
@@ -260,7 +259,11 @@ def finish_order(message, user_id):
 def webhook():
     return "ProVera bot is running 24/7!", 200
 
+def run_bot():
+    bot.infinity_polling(timeout=10, long_polling_timeout=5)
+
 if __name__ == "__main__":
-    threading.Thread(target=bot.infinity_polling).start()
+    # Render poller qotib qolmasligi uchun xavfsiz threading sozlamasi
+    threading.Thread(target=run_bot, daemon=True).start()
     port = int(os.environ.get("PORT", 5000))
     server.run(host="0.0.0.0", port=port)
