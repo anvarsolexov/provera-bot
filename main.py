@@ -13,7 +13,9 @@ TOKEN = '8760453840:AAEjCAOwtGZ-d8xGiIpaZ5xQ2MmeDasYZpI'
 bot = telebot.TeleBot(TOKEN)
 
 KANAL_USERNAME = "@ProVera_Design"
-ADMIN_CHAT_ID = -5431821095  # Guruh ID raqami
+
+# Yangilangan guruh ID raqami joylashtirildi 🚀
+ADMIN_CHAT_ID = -1003997246734  
 
 user_data = {}
 
@@ -76,7 +78,6 @@ def callback_check(call):
     else:
         bot.answer_callback_query(call.id, "❌ Siz hali kanalga a'zo bo'lmadingiz. Iltimos, oldin a'zo bo'ling!", show_alert=True)
 
-# 📞 3-BOSQICH: TELEFON KONTAKT TUGMASI BOSILGANDA ALOHIDA ISHLAYDI
 @bot.message_handler(content_types=['contact'])
 def handle_contact(message):
     user_id = message.from_user.id
@@ -86,7 +87,6 @@ def handle_contact(message):
     else:
         bot.send_message(message.chat.id, "⚠️ Hozir telefon raqam yuborish bosqichi emas.")
 
-# MATNLI XABARLARNI QAYTA ISHLASH
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
     user_id = message.from_user.id
@@ -102,12 +102,10 @@ def handle_text(message):
         bosh_menyu(message)
         return
 
-    # Agar foydalanuvchi buyurtma berish jarayonida bo'lsa
     if user_id in user_data and message.text != "✍️ Onlayn Buyurtma berish":
         process_order_steps(message)
         return
 
-    # Asosiy Menyular Navigatsiyasi
     if message.text == "📱 Ilovani yuklab olish":
         bot.send_message(message.chat.id, "Ilovani yuklab olish uchun havola: https://share.google/yYkrudNSAmI7V...")
         
@@ -184,7 +182,6 @@ def handle_text(message):
     else:
         bot.send_message(message.chat.id, "⚠️ *Noto'g'ri buyruq!* Iltimos, pastdagi tayyor menyu tugmalaridan birini bosing. 👇", parse_mode="Markdown")
 
-# ANKETA BOSQICHLARINI MATNLI TEKSHIRISH
 def process_order_steps(message):
     user_id = message.from_user.id
     current_step = user_data[user_id]['step']
@@ -215,59 +212,4 @@ def process_order_steps(message):
         btn_cancel = types.KeyboardButton("❌ Buyurtmani bekor qilish")
         markup_phone.add(btn_phone, btn_cancel)
         
-        bot.send_message(message.chat.id, "📞 *3-Bosqich:* Telefon raqamingizni kiriting (Masalan: +998901234567) yoki pastdagi tugma orqali yuboring:", parse_mode="Markdown", reply_markup=markup_phone)
-
-    elif current_step == 3:
-        # Qo'lda telefon raqam yozib yuborilganda tekshirish
-        clean_phone = re.sub(r'[^\d+]', '', text)
-        if len(clean_phone) < 9:
-            bot.send_message(message.chat.id, "❌ *Noto'g'ri telefon raqami!* Iltimos, raqamingizni to'g'ri formatda kiriting yoki pastdagi tugmani bosing:")
-            return
-            
-        user_data[user_id]['phone'] = clean_phone
-        finish_order(message, user_id)
-
-# RASM, FAJL YOKI BOSHQA SIKLLAR KELGANDA BOT QOTIB QOLMASLIGI UCHUN
-@bot.message_handler(content_types=['photo', 'document', 'audio', 'video'])
-def handle_other_contents(message):
-    bot.send_message(message.chat.id, "⚠️ *Kutilmagan fayl yoki rasm!* Iltimos, faqat menyudagi tugmalardan foydalaning.")
-
-# 🛠 BUYURTMANI GURUHGA XAVFSIZ VA TO'G'RI FORMATDA CHIQARISH
-def finish_order(message, user_id):
-    name = user_data[user_id]['name']
-    service = user_data[user_id]['service']
-    phone = user_data[user_id]['phone']
-    
-    # Username ichidagi har qanday belgidan (masalan '_') qochish uchun text format ishlatamiz
-    raw_username = message.from_user.username
-    username_text = f"@{raw_username}" if raw_username else "Mavjud emas"
-    
-    # Formatlash muammolarini 100% hal qilish uchun parse_mode-ni butunlay olib tashladik (Plain Text)
-    admin_matn = (
-        "🔥 YANGI BUYURTMA KELDI! 🔥\n\n"
-        f"👤 Mijoz: {name}\n"
-        f"💼 Xizmat turi: {service}\n"
-        f"📞 Telefon: {phone}\n"
-        f"🤖 Telegram profili: {username_text}\n"
-    )
-    
-    try:
-        # Hech qanday parse_mode-siz (Oddiy matn ko'rinishida) yuboriladi, xatolik ehtimoli 0%
-        bot.send_message(ADMIN_CHAT_ID, admin_matn)
-        bot.send_message(message.chat.id, "🎉 Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi.\n\nTez orada loyiha menejerlarimiz siz bilan bog'lanishadi.")
-    except Exception as e:
-        bot.send_message(message.chat.id, "⚠️ Tizimda kichik xatolik yuz berdi. Guruhga buyurtma jo'natib bo'lmadi.")
-        print(f"Xatolik tafsiloti: {e}")
-        
-    if user_id in user_data:
-        del user_data[user_id]
-    bosh_menyu(message)
-
-@server.route('/')
-def webhook():
-    return "ProVera bot is running 24/7!", 200
-
-if __name__ == "__main__":
-    threading.Thread(target=bot.infinity_polling).start()
-    port = int(os.environ.get("PORT", 5000))
-    server.run(host="0.0.0.0", port=port)
+        bot.send_message(message.chat.id, "📞 *3-Bosqich:* Telefon raqamingizni kiriting (Masalan: +998901234567) yoki past
