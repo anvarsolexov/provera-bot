@@ -8,7 +8,7 @@ import re
 # Render veb-serveri
 server = Flask(__name__)
 
-# Sizning tokeningiz
+# Botingiz tokeni
 TOKEN = '8760453840:AAEjCAOwtGZ-d8xGiIpaZ5xQ2MmeDasYZpI'
 bot = telebot.TeleBot(TOKEN)
 
@@ -76,7 +76,17 @@ def callback_check(call):
     else:
         bot.answer_callback_query(call.id, "❌ Siz hali kanalga a'zo bo'lmadingiz. Iltimos, oldin a'zo bo'ling!", show_alert=True)
 
-# Matnli xabarlarni qayta ishlash
+# 📞 3-BOSQICH: TELEFON KONTAKT TUGMASI BOSILGANDA ALOHIDA ISHLAYDI
+@bot.message_handler(content_types=['contact'])
+def handle_contact(message):
+    user_id = message.from_user.id
+    if user_id in user_data and user_data[user_id]['step'] == 3:
+        user_data[user_id]['phone'] = message.contact.phone_number
+        finish_order(message, user_id)
+    else:
+        bot.send_message(message.chat.id, "⚠️ Hozir telefon raqam yuborish bosqichi emas.")
+
+# MATNLI XABARLARNI QAYTA ISHLASH
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
     user_id = message.from_user.id
@@ -92,10 +102,12 @@ def handle_text(message):
         bosh_menyu(message)
         return
 
+    # Agar foydalanuvchi buyurtma berish jarayonida bo'lsa
     if user_id in user_data and message.text != "✍️ Onlayn Buyurtma berish":
         process_order_steps(message)
         return
 
+    # Asosiy Menyular Navigatsiyasi
     if message.text == "📱 Ilovani yuklab olish":
         bot.send_message(message.chat.id, "Ilovani yuklab olish uchun havola: https://share.google/yYkrudNSAmI7V...")
         
@@ -172,6 +184,7 @@ def handle_text(message):
     else:
         bot.send_message(message.chat.id, "⚠️ *Noto'g'ri buyruq!* Iltimos, pastdagi tayyor menyu tugmalaridan birini bosing. 👇", parse_mode="Markdown")
 
+# ANKETA BOSQICHLARINI MATNLI TEKSHIRISH
 def process_order_steps(message):
     user_id = message.from_user.id
     current_step = user_data[user_id]['step']
@@ -205,6 +218,7 @@ def process_order_steps(message):
         bot.send_message(message.chat.id, "📞 *3-Bosqich:* Telefon raqamingizni kiriting (Masalan: +998901234567) yoki pastdagi tugma orqali yuboring:", parse_mode="Markdown", reply_markup=markup_phone)
 
     elif current_step == 3:
+        # Qo'lda telefon raqam yozib yuborilganda tekshirish
         clean_phone = re.sub(r'[^\d+]', '', text)
         if len(clean_phone) < 9:
             bot.send_message(message.chat.id, "❌ *Noto'g'ri telefon raqami!* Iltimos, raqamingizni to'g'ri formatda kiriting yoki pastdagi tugmani bosing:")
@@ -213,42 +227,37 @@ def process_order_steps(message):
         user_data[user_id]['phone'] = clean_phone
         finish_order(message, user_id)
 
-@bot.message_handler(content_types=['contact', 'photo', 'document', 'audio', 'video'])
+# RASM, FAJL YOKI BOSHQA SIKLLAR KELGANDA BOT QOTIB QOLMASLIGI UCHUN
+@bot.message_handler(content_types=['photo', 'document', 'audio', 'video'])
 def handle_other_contents(message):
-    user_id = message.from_user.id
-    if message.content_type == 'contact':
-        if user_id in user_data and user_data[user_id]['step'] == 3:
-            user_data[user_id]['phone'] = message.contact.phone_number
-            finish_order(message, user_id)
-        else:
-            bot.send_message(message.chat.id, "⚠️ Hozir telefon raqam yuborish bosqichi emas.")
-    else:
-        bot.send_message(message.chat.id, "⚠️ *Kutilmagan fayl yoki rasm!* Iltimos, faqat menyudagi tugmalardan foydalaning.")
+    bot.send_message(message.chat.id, "⚠️ *Kutilmagan fayl yoki rasm!* Iltimos, faqat menyudagi tugmalardan foydalaning.")
 
-# 🛠 BUYURTMANI GURUHGA HTML FORMATDA XAVFSIZ YUBORISH
+# 🛠 BUYURTMANI GURUHGA XAVFSIZ VA TO'G'RI FORMATDA CHIQARISH
 def finish_order(message, user_id):
     name = user_data[user_id]['name']
     service = user_data[user_id]['service']
     phone = user_data[user_id]['phone']
-    username = f"@{message.from_user.username}" if message.from_user.username else "Mavjud emas"
     
-    # Guruhga yuboriladigan xabar Markdown'dan HTML formatiga o'tkazildi. 
-    # Bu format chiziqchalardan ('_') umuman qo'rqmaydi!
+    # Username ichidagi har qanday belgidan (masalan '_') qochish uchun text format ishlatamiz
+    raw_username = message.from_user.username
+    username_text = f"@{raw_username}" if raw_username else "Mavjud emas"
+    
+    # Formatlash muammolarini 100% hal qilish uchun parse_mode-ni butunlay olib tashladik (Plain Text)
     admin_matn = (
-        "<b>🔥 YANGI BUYURTMA KELDI! 🔥</b>\n\n"
-        f"<b>👤 Mijoz:</b> {name}\n"
-        f"<b>💼 Xizmat turi:</b> {service}\n"
-        f"<b>📞 Telefon:</b> {phone}\n"
-        f"<b>🤖 Telegram profili:</b> {username}\n"
+        "🔥 YANGI BUYURTMA KELDI! 🔥\n\n"
+        f"👤 Mijoz: {name}\n"
+        f"💼 Xizmat turi: {service}\n"
+        f"📞 Telefon: {phone}\n"
+        f"🤖 Telegram profili: {username_text}\n"
     )
     
     try:
-        # parse_mode="HTML" qilib o'zgartirildi
-        bot.send_message(ADMIN_CHAT_ID, admin_matn, parse_mode="HTML")
-        bot.send_message(message.chat.id, "🎉 <b>Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi.</b>\n\nTez orada loyiha menejerlarimiz siz bilan bog'lanishadi.", parse_mode="HTML")
+        # Hech qanday parse_mode-siz (Oddiy matn ko'rinishida) yuboriladi, xatolik ehtimoli 0%
+        bot.send_message(ADMIN_CHAT_ID, admin_matn)
+        bot.send_message(message.chat.id, "🎉 Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi.\n\nTez orada loyiha menejerlarimiz siz bilan bog'lanishadi.")
     except Exception as e:
         bot.send_message(message.chat.id, "⚠️ Tizimda kichik xatolik yuz berdi. Guruhga buyurtma jo'natib bo'lmadi.")
-        print(f"Xatolik yuz berdi: {e}")
+        print(f"Xatolik tafsiloti: {e}")
         
     if user_id in user_data:
         del user_data[user_id]
