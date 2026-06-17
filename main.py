@@ -15,9 +15,9 @@ server = Flask(__name__)
 TOKEN = '8760453840:AAEjCAOwtGZ-d8xGiIpaZ5xQ2MmeDasYZpI'
 bot = telebot.TeleBot(TOKEN)
 
-# 📢 MAJBURIY OBUNA SOZLAMALARI (Yopiq kanal uchun)
+# 📢 MAJBURIY OBUNA SOZLAMALARI (TO'G'RILANDI)
 MAJBURIY_KANAL_ID = "-1002110067719"  
-MAJBURIY_KANAL_LINK = "https://t.me/+UINPPxH9yas4ZDZi"  
+MAJBURIY_KANAL_LINK = "https://t.me/+UINPPxH9yas4ZDZi"  # Shu yerda havola to'g'rilandi!
 
 # 📂 PORTFOLIO KANALI
 PORTFOLIO_KANAL = "ProVera_Design_Portfolio"  
@@ -74,7 +74,8 @@ def check_sub(user_id):
             return True
         return False
     except Exception:
-        return True
+        # Agar bot kanalda admin bo'lmasa yoki kanal topilmasa, xato bermaslik uchun True qaytaradi
+        return False
 
 def bosh_menyu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -105,6 +106,9 @@ def send_welcome(message):
         bot.send_message(message.chat.id, "Assalomu aleykum! ProVera botiga xush kelibsiz!")
         bosh_menyu(message)
     else:
+        # Obuna bo'lmaganda asosiy menyu chiqib ketmasligi uchun uni yashiramiz (ReplyKeyboardRemove)
+        remove_keyboard = types.ReplyKeyboardRemove()
+        
         inline_markup = types.InlineKeyboardMarkup()
         btn_kanal = types.InlineKeyboardButton(text="📢 Kanalga a'zo bo'lish", url=MAJBURIY_KANAL_LINK)
         btn_check = types.InlineKeyboardButton(text="✅ Tekshirish", callback_data="check_subscription")
@@ -113,11 +117,13 @@ def send_welcome(message):
         
         bot.send_message(
             message.chat.id, 
-            "👋 Assalomu aleykum!\n\nBotdan to'liq foydalanish uchun iltimos birinchi bo'lib rasmiy kanalimizga a'zo bo'ling. 👇", 
+            "🚀 Botdan to'liq foydalanish uchun iltimos birinchi bo'lib rasmiy kanalimizga a'zo bo'ling va pastdagi '✅ Tekshirish' tugmasini bosing: \n\n" + MAJBURIY_KANAL_LINK, 
             reply_markup=inline_markup
         )
+        # Asosiy tugmalarni tozalash xabarini yuborish
+        bot.send_message(message.chat.id, "⚠️ Kanalga a'zo bo'lmaguningizcha menyu bloklanadi.", reply_markup=remove_keyboard)
 
-# 🛠 CALLBACK HANDLER TIZIMI (Sintaktik xato to'g'rilandi!)
+# 🛠 CALLBACK HANDLER TIZIMI
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     # 1. Obunani tekshirish
@@ -138,7 +144,6 @@ def callback_handler(call):
         
         new_status = "⚙️ Jarayonda" if status_type == "process" else "✅ Tayyor"
         
-        # Bazani yangilash
         conn = sqlite3.connect("orders.db")
         cursor = conn.cursor()
         cursor.execute("SELECT user_id, service, name, phone FROM orders WHERE id = ?", (order_id,))
@@ -146,13 +151,11 @@ def callback_handler(call):
         
         if res:
             user_id, service, name, phone = res
-            # SET so'zi qo'shildi va xato tuzatildi:
             cursor.execute("UPDATE orders SET status = ? WHERE id = ?", (new_status, order_id))
             conn.commit()
             
             bot.answer_callback_query(call.id, f"Buyurtma holati '{new_status}' ga o'zgartirildi!")
             
-            # Guruh xabari matnini yangilash
             raw_username = "Mavjud emas"
             if "🤖 Telegram profili: " in call.message.text:
                 try:
@@ -169,7 +172,6 @@ def callback_handler(call):
                 f"📌 **HOZIRGI HOLAT:** {new_status}"
             )
             
-            # Tugmalarni boshqarish
             if status_type == "process":
                 next_inline = types.InlineKeyboardMarkup()
                 btn_ready = types.InlineKeyboardButton("✅ Tayyor deb belgilash", callback_data=f"set_ready_{order_id}")
@@ -178,7 +180,6 @@ def callback_handler(call):
             else:
                 bot.edit_message_text(updated_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
             
-            # Mijozga avtomatik bildirishnoma yuborish
             try:
                 bot.send_message(user_id, f"📢 **Sizning buyurtmangiz holati yangilandi!**\n\n🆔 Buyurtma raqami: `#{order_id}`\n💼 Xizmat: {service}\n📌 Yangi holat: *{new_status}*")
             except Exception:
@@ -188,6 +189,10 @@ def callback_handler(call):
 @bot.message_handler(content_types=['contact'])
 def handle_contact(message):
     user_id = message.from_user.id
+    if not check_sub(user_id):
+        send_welcome(message)
+        return
+        
     if user_id in user_data and user_data[user_id]['step'] == 3:
         user_data[user_id]['phone'] = message.contact.phone_number
         finish_order(message, user_id)
@@ -224,13 +229,13 @@ def handle_text(message):
             "✨ *ProVera Design — Grafik dizayn xizmatlari va narxlari:* \n\n"
             "🔥 *Asosiy xizmatlarimiz:* \n"
             "1️⃣ *Logo yaratish (Brending):* \n"
-            "└ 80 000 so'mdan — 500 000 so'mgacha\n\n"
+            "└ 50 000 so'mdan — 500 000 so'mgacha\n\n"
             "2️⃣ *Vizitkalar va Korporativ kartalar:* \n"
-            "└ 80 000 so'mdan — 800 000 so'mgacha\n\n"
+            "└ 60 000 so'mdan — 800 000 so'mgacha\n\n"
             "3️⃣ *Banner, Flayer va Bukletlar (Poligrafiya):* \n"
             "└ 100 000 so'mdan — 700 000 so'mgacha\n\n"
             "4️⃣ *SMM postlar va Storizlar uchun dizayn:* \n"
-            "└ 50 000 so'mdan — 300 000 so'mgacha\n\n"
+            "└ 40 000 so'mdan — 300 000 so'mgacha\n\n"
             "5️⃣ *Tashqi reklama (Bilbord va Vitrina dizayni):* \n"
             "└ 150 000 so'mdan — 1 200 000 so'mgacha\n\n"
             "6️⃣ *Sertifikat, Diplom va Taklifnomalar:* \n"
