@@ -11,15 +11,15 @@ import sqlite3
 # Render veb-serveri
 server = Flask(__name__)
 
-# Botingiz tokeni
-TOKEN = '8760453840:AAEjCAOwtGZ-d8xGiIpaZ5xQ2MmeDasYZpI'
+# 🔑 YANGI API TOKEN JOYLASHTIRILDI
+TOKEN = '8760453840:AAF7GPFBVMEg0jvxa8hsKfdlaee1VI8V1IA'
 bot = telebot.TeleBot(TOKEN)
 
-# 📢 MAJBURIY OBUNA SOZLAMALARI (TO'G'RILANDI)
+# 📢 MAJBURIY OBUNA SOZLAMALARI
 MAJBURIY_KANAL_ID = "@ProVera_Design"  
 MAJBURIY_KANAL_LINK = "https://t.me/ProVera_Design"  
 
-# 📂 PORTFOLIO KANALI (ALOHIDA AJRATILDI)
+# 📂 PORTFOLIO KANALI
 PORTFOLIO_KANAL = "ProVera_Design_Portfolio"  
 
 # Guruh ID raqami (Buyurtmalar tushadigan guruh)
@@ -60,11 +60,15 @@ def add_order(user_id, name, service, phone):
     return order_id
 
 def get_order_status(order_id):
-    conn = sqlite3.connect("orders.db")
-    cursor = cursor = conn.cursor() if 'conn' in locals() else sqlite3.connect("orders.db").cursor()
-    cursor.execute("SELECT status, service FROM orders WHERE id = ?", (order_id,))
-    res = cursor.fetchone()
-    return res
+    try:
+        conn = sqlite3.connect("orders.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT status, service FROM orders WHERE id = ?", (order_id,))
+        res = cursor.fetchone()
+        conn.close()
+        return res
+    except Exception:
+        return None
 
 def check_sub(user_id):
     try:
