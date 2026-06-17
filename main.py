@@ -17,7 +17,7 @@ bot = telebot.TeleBot(TOKEN)
 
 # 📢 MAJBURIY OBUNA SOZLAMALARI (TO'G'RILANDI)
 MAJBURIY_KANAL_ID = "-1002110067719"  
-MAJBURIY_KANAL_LINK = "https://t.me/+UINPPxH9yas4ZDZi"  # Shu yerda havola to'g'rilandi!
+MAJBURIY_KANAL_LINK = "https://t.me/ProVera_Design"  # Shu yerda havola to'g'rilandi!
 
 # 📂 PORTFOLIO KANALI
 PORTFOLIO_KANAL = "ProVera_Design_Portfolio"  
