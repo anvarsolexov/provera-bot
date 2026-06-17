@@ -16,10 +16,10 @@ TOKEN = '8760453840:AAEjCAOwtGZ-d8xGiIpaZ5xQ2MmeDasYZpI'
 bot = telebot.TeleBot(TOKEN)
 
 # 📢 MAJBURIY OBUNA SOZLAMALARI (TO'G'RILANDI)
-MAJBURIY_KANAL_ID = "-1002110067719"  
-MAJBURIY_KANAL_LINK = "https://t.me/ProVera_Design"  # Shu yerda havola to'g'rilandi!
+MAJBURIY_KANAL_ID = "@ProVera_Design"  
+MAJBURIY_KANAL_LINK = "https://t.me/ProVera_Design"  
 
-# 📂 PORTFOLIO KANALI
+# 📂 PORTFOLIO KANALI (ALOHIDA AJRATILDI)
 PORTFOLIO_KANAL = "ProVera_Design_Portfolio"  
 
 # Guruh ID raqami (Buyurtmalar tushadigan guruh)
@@ -61,10 +61,9 @@ def add_order(user_id, name, service, phone):
 
 def get_order_status(order_id):
     conn = sqlite3.connect("orders.db")
-    cursor = conn.cursor()
+    cursor = cursor = conn.cursor() if 'conn' in locals() else sqlite3.connect("orders.db").cursor()
     cursor.execute("SELECT status, service FROM orders WHERE id = ?", (order_id,))
     res = cursor.fetchone()
-    conn.close()
     return res
 
 def check_sub(user_id):
@@ -74,9 +73,9 @@ def check_sub(user_id):
             return True
         return False
     except Exception as e:
-        print(f"Obunani tekshirishda xatolik: {e}")
-        # Agar bot hali kanalda admin bo'lmasa yoki ID noto'g'ri bo'lsa, 
-        # bot butunlay qulflanib qolmasligi uchun vaqtincha True qaytaradi:
+        print(f"Obunani tekshirishda texnik xatolik: {e}")
+        # Agar bot hali kanalda admin bo'lmasa yoki Telegram API kechiksa, 
+        # bot butunlay qulflanib qolmasligi uchun foydalanuvchini o'tkazib yuboradi:
         return True
 
 def bosh_menyu(message):
@@ -108,7 +107,7 @@ def send_welcome(message):
         bot.send_message(message.chat.id, "Assalomu aleykum! ProVera botiga xush kelibsiz!")
         bosh_menyu(message)
     else:
-        # Obuna bo'lmaganda asosiy menyu chiqib ketmasligi uchun uni yashiramiz (ReplyKeyboardRemove)
+        # Obuna bo'lmaganda menyu tugmalari chiqib turmasligi uchun yashiramiz
         remove_keyboard = types.ReplyKeyboardRemove()
         
         inline_markup = types.InlineKeyboardMarkup()
@@ -122,26 +121,25 @@ def send_welcome(message):
             "🚀 Botdan to'liq foydalanish uchun iltimos birinchi bo'lib rasmiy kanalimizga a'zo bo'ling va pastdagi '✅ Tekshirish' tugmasini bosing: \n\n" + MAJBURIY_KANAL_LINK, 
             reply_markup=inline_markup
         )
-        # Asosiy tugmalarni tozalash xabarini yuborish
         bot.send_message(message.chat.id, "⚠️ Kanalga a'zo bo'lmaguningizcha menyu bloklanadi.", reply_markup=remove_keyboard)
 
 # 🛠 CALLBACK HANDLER TIZIMI
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
-    # 1. Obunani tekshirish
     if call.data == "check_subscription":
         if check_sub(call.from_user.id):
-            try: bot.delete_message(call.message.chat.id, call.message.message_id)
-            except Exception: pass
+            try: 
+                bot.delete_message(call.message.chat.id, call.message.message_id)
+            except Exception: 
+                pass
             bot.send_message(call.message.chat.id, "🎉 Rahmat! Obuna tasdiqlandi.")
             bosh_menyu(call.message)
         else:
             bot.answer_callback_query(call.id, "❌ Siz hali kanalga a'zo bo'lmadingiz. Iltimos, oldin a'zo bo'ling!", show_alert=True)
     
-    # 2. Admin tomonidan statusni o'zgartirish
     elif call.data.startswith("set_"):
         parts = call.data.split("_")
-        status_type = parts[1] # "process" yoki "ready"
+        status_type = parts[1]
         order_id = parts[2]
         
         new_status = "⚙️ Jarayonda" if status_type == "process" else "✅ Tayyor"
@@ -210,7 +208,8 @@ def handle_text(message):
         return
 
     if message.text == "❌ Buyurtmani bekor qilish":
-        if user_id in user_data: del user_data[user_id]
+        if user_id in user_data: 
+            del user_data[user_id]
         bot.send_message(message.chat.id, "❌ Amaliyot bekor qilindi.")
         bosh_menyu(message)
         return
@@ -347,7 +346,8 @@ def process_checking_id(message):
     else:
         bot.send_message(message.chat.id, f"❌ Kechirasiz, `#{order_id}` raqamli buyurtma topilmadi.")
     
-    if user_id in user_data: del user_data[user_id]
+    if user_id in user_data: 
+        del user_data[user_id]
     bosh_menyu(message)
 
 def finish_order(message, user_id):
@@ -387,12 +387,13 @@ def finish_order(message, user_id):
         bot.send_message(message.chat.id, "⚠️ Tizimda xatolik yuz berdi. Birozdan so'ng urinib ko'ring.")
         print(f"Xatolik: {e}")
         
-    if user_id in user_data: del user_data[user_id]
+    if user_id in user_data: 
+        del user_data[user_id]
     bosh_menyu(message)
 
 @server.route('/')
 def webhook():
-    return "ProVera bot with Live Status is running!", 200
+    return "ProVera bot is running!", 200
 
 # ANTI-SLEEP (Uxlamaslik tizimi)
 def keep_alive():
