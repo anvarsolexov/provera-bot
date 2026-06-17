@@ -11,7 +11,7 @@ import sqlite3
 # Render veb-serveri
 server = Flask(__name__)
 
-# 🔑 YANGI API TOKEN JOYLASHTIRILDI
+# 🔑 API TOKEN
 TOKEN = '8760453840:AAF7GPFBVMEg0jvxa8hsKfdlaee1VI8V1IA'
 bot = telebot.TeleBot(TOKEN)
 
@@ -78,8 +78,6 @@ def check_sub(user_id):
         return False
     except Exception as e:
         print(f"Obunani tekshirishda texnik xatolik: {e}")
-        # Agar bot hali kanalda admin bo'lmasa yoki Telegram API kechiksa, 
-        # bot butunlay qulflanib qolmasligi uchun foydalanuvchini o'tkazib yuboradi:
         return True
 
 def bosh_menyu(message):
@@ -111,7 +109,6 @@ def send_welcome(message):
         bot.send_message(message.chat.id, "Assalomu aleykum! ProVera botiga xush kelibsiz!")
         bosh_menyu(message)
     else:
-        # Obuna bo'lmaganda menyu tugmalari chiqib turmasligi uchun yashiramiz
         remove_keyboard = types.ReplyKeyboardRemove()
         
         inline_markup = types.InlineKeyboardMarkup()
@@ -127,7 +124,6 @@ def send_welcome(message):
         )
         bot.send_message(message.chat.id, "⚠️ Kanalga a'zo bo'lmaguningizcha menyu bloklanadi.", reply_markup=remove_keyboard)
 
-# 🛠 CALLBACK HANDLER TIZIMI
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     if call.data == "check_subscription":
@@ -245,7 +241,7 @@ def handle_text(message):
             "└ 150 000 so'mdan — 1 200 000 so'mgacha\n\n"
             "6️⃣ *Sertifikat, Diplom va Taklifnomalar:* \n"
             "└ 30 000 so'mdan — 250 000 so'mgacha\n\n"
-            "⚙️ *Boshqa barcha turdagi grafik xizmatlar:* \n"
+            "⚙️ *Boshqa bacha turdagi grafik xizmatlar:* \n"
             "• Firma stillari (Brandbook) yaratish...\n\n"
             "💡 _Eslatma: Yakuniy narx buyurtmaning murakkabligi va muddatiga qarab o'zgarishi mumkin._"
         )
@@ -399,7 +395,6 @@ def finish_order(message, user_id):
 def webhook():
     return "ProVera bot is running!", 200
 
-# ANTI-SLEEP (Uxlamaslik tizimi)
 def keep_alive():
     URL = "https://" + os.environ.get("RENDER_EXTERNAL_HOSTNAME", "provera-bot.onrender.com")
     time.sleep(20)
@@ -413,7 +408,15 @@ def keep_alive():
 def run_bot():
     bot.infinity_polling(timeout=20, long_polling_timeout=10)
 
+# 🚀 ASOSIY ISHGA TUSHIRISH BLOKI (SHU YERGA O'CHIRISH BUYRUG'I QO'SHILDI)
 if __name__ == "__main__":
+    try:
+        # 📌 Ko'k rangli "Menu" tugmasini botdan mutlaqo tozalab tashlash
+        bot.remove_chat_menu_button()
+        print("Menu bot tugmasi muvaffaqiyatli o'chirildi.")
+    except Exception as e:
+        print(f"Menu tugmasini o'chirishda xatolik: {e}")
+
     threading.Thread(target=run_bot, daemon=True).start()
     threading.Thread(target=keep_alive, daemon=True).start()
     port = int(os.environ.get("PORT", 5000))
