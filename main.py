@@ -241,7 +241,7 @@ def handle_text(message):
             "└ 150 000 so'mdan — 1 200 000 so'mgacha\n\n"
             "6️⃣ *Sertifikat, Diplom va Taklifnomalar:* \n"
             "└ 30 000 so'mdan — 250 000 so'mgacha\n\n"
-            "⚙️ *Boshqa bacha turdagi grafik xizmatlar:* \n"
+            "⚙️ *Boshqa barcha turdagi grafik xizmatlar:* \n"
             "• Firma stillari (Brandbook) yaratish...\n\n"
             "💡 _Eslatma: Yakuniy narx buyurtmaning murakkabligi va muddatiga qarab o'zgarishi mumkin._"
         )
@@ -408,14 +408,21 @@ def keep_alive():
 def run_bot():
     bot.infinity_polling(timeout=20, long_polling_timeout=10)
 
-# 🚀 ASOSIY ISHGA TUSHIRISH BLOKI (SHU YERGA O'CHIRISH BUYRUG'I QO'SHILDI)
-if __name__ == "__main__":
+# 🛠 100% ISHLAYDIGAN YANGI TOZALASH METODI
+def delete_menu_button():
     try:
-        # 📌 Ko'k rangli "Menu" tugmasini botdan mutlaqo tozalab tashlash
-        bot.remove_chat_menu_button()
-        print("Menu bot tugmasi muvaffaqiyatli o'chirildi.")
+        url = f"https://api.telegram.org/bot{TOKEN}/deleteChatMenuButton"
+        response = requests.post(url)
+        if response.status_code == 200:
+            print("🎯 Ko'k Menu tugmasi Telegram serveridan muvaffaqiyatli o'chirildi!")
+        else:
+            print(f"Xato: {response.text}")
     except Exception as e:
-        print(f"Menu tugmasini o'chirishda xatolik: {e}")
+        print(f"Tugmani o'chirishda xatolik: {e}")
+
+if __name__ == "__main__":
+    # Bot ishga tushishi bilan eski menyu tugmasini o'chiradi:
+    delete_menu_button()
 
     threading.Thread(target=run_bot, daemon=True).start()
     threading.Thread(target=keep_alive, daemon=True).start()
