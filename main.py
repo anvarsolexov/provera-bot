@@ -73,9 +73,11 @@ def check_sub(user_id):
         if member.status in ['member', 'administrator', 'creator']:
             return True
         return False
-    except Exception:
-        # Agar bot kanalda admin bo'lmasa yoki kanal topilmasa, xato bermaslik uchun True qaytaradi
-        return False
+    except Exception as e:
+        print(f"Obunani tekshirishda xatolik: {e}")
+        # Agar bot hali kanalda admin bo'lmasa yoki ID noto'g'ri bo'lsa, 
+        # bot butunlay qulflanib qolmasligi uchun vaqtincha True qaytaradi:
+        return True
 
 def bosh_menyu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
