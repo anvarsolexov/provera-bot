@@ -4,6 +4,9 @@ import os
 from flask import Flask
 import threading
 import re
+import time
+import requests
+import sqlite3
 
 # Render veb-serveri
 server = Flask(__name__)
@@ -12,11 +15,11 @@ server = Flask(__name__)
 TOKEN = '8760453840:AAEjCAOwtGZ-d8xGiIpaZ5xQ2MmeDasYZpI'
 bot = telebot.TeleBot(TOKEN)
 
-# 📢 MAJBURIY OBUNA SOZLAMALARI (Yopiq kanal uchun yangilandi)
-MAJBURIY_KANAL_ID = "-1002110067719"  # Siz yuborgan yangi kanal ID si
-MAJBURIY_KANAL_LINK = "https://t.me/+UINPPxH9yas4ZDZi"  # Taklif havolasi
+# 📢 MAJBURIY OBUNA SOZLAMALARI
+MAJBURIY_KANAL_ID = "-1002110067719"  
+MAJBURIY_KANAL_LINK = "https://t.me/+UINPPxH9yas4ZDZi"  
 
-# 📂 PORTFOLIO KANALI (Ishlarni ko'rish uchun)
+# 📂 PORTFOLIO KANALI
 PORTFOLIO_KANAL = "ProVera_Design_Portfolio"  
 
 # Guruh ID raqami (Buyurtmalar tushadigan guruh)
@@ -24,16 +27,64 @@ ADMIN_CHAT_ID = "-1003997246734"
 
 user_data = {}
 
+# 🗄 MA'LUMOTLAR BAZASINI SOZLASH
+def init_db():
+    conn = sqlite3.connect("orders.db")
+    cursor = conn.cursor()
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS orders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            name TEXT,
+            service TEXT,
+            phone TEXT,
+            status TEXT
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+init_db()
+
+# BAZA BILAN ISHLASH FUNKSIYALARI
+def add_order(user_id, name, service, phone):
+    conn = sqlite3.connect("orders.db")
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO orders (user_id, name, service, phone, status) VALUES (?, ?, ?, ?, ?)",
+        (user_id, name, service, phone, "⌛ Kutilmoqda")
+    )
+    order_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return order_id
+
+def get_order_status(order_id):
+    conn = sqlite3.connect("orders.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT status, service FROM orders WHERE id = ?", (order_id,))
+    res = cursor.fetchone()
+    conn.close()
+    return res
+
+def update_order_status(order_id, new_status):
+    conn = sqlite3.connect("orders.db")
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id, service FROM orders WHERE id = ?", (order_id,))
+    res = cursor.fetchone()
+    if res:
+        cursor.execute("UPDATE orders WHERE id = ?", (new_status, order_id))
+        conn.commit()
+    conn.close()
+    return res  # (user_id, service) qaytaradi xabar berish uchun
+
 def check_sub(user_id):
     try:
-        # Yangi ID orqali a'zolikni tekshirish
         member = bot.get_chat_member(MAJBURIY_KANAL_ID, user_id)
         if member.status in ['member', 'administrator', 'creator']:
             return True
         return False
-    except Exception as e:
-        print(f"Tekshirishda xato: {e}")
-        # Texnik xatolik yuz bersa, foydalanuvchi qolib ketmasligi uchun True qaytaramiz
+    except Exception:
         return True
 
 def bosh_menyu(message):
@@ -77,17 +128,49 @@ def send_welcome(message):
             reply_markup=inline_markup
         )
 
-@bot.callback_query_handler(func=lambda call: call.data == "check_subscription")
-def callback_check(call):
-    if check_sub(call.from_user.id):
-        try:
-            bot.delete_message(call.message.chat.id, call.message.message_id)
-        except Exception:
-            pass
-        bot.send_message(call.message.chat.id, "🎉 Rahmat! Obuna tasdiqlandi.")
-        bosh_menyu(call.message)
-    else:
-        bot.answer_callback_query(call.id, "❌ Siz hali kanalga a'zo bo'lmadingiz. Iltimos, oldin a'zo bo'ling!", show_alert=True)
+@bot.callback_query_handler(func=lambda call: True)
+def callback_handler(call):
+    # 1. Obunani tekshirish
+    if call.data == "check_subscription":
+        if check_sub(call.from_user.id):
+            try: bot.delete_message(call.message.chat.id, call.message.message_id)
+            except Exception: pass
+            bot.send_message(call.message.chat.id, "🎉 Rahmat! Obuna tasdiqlandi.")
+            bosh_menyu(call.message)
+        else:
+            bot.answer_callback_query(call.id, "❌ Siz hali kanalga a'zo bo'lmadingiz. Iltimos, oldin a'zo bo'ling!", show_alert=True)
+    
+    # 2. Admin tomonidan statusni o'zgartirish
+    elif call.data.startswith("set_"):
+        parts = call.data.split("_")
+        status_type = parts[1] # "process" yoki "ready"
+        order_id = parts[2]
+        
+        new_status = "⚙️ Jarayonda" if status_type == "process" else "✅ Tayyor"
+        
+        # Bazani yangilash
+        conn = sqlite3.connect("orders.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, service FROM orders WHERE id = ?", (order_id,))
+        res = cursor.fetchone()
+        
+        if res:
+            user_id, service = res
+            cursor.execute("UPDATE orders SET status = ? WHERE id = ?", (new_status, order_id))
+            conn.commit()
+            
+            # Guruhdagi xabarni yangilash (Eski tugmalarni olib tashlash)
+            bot.answer_callback_query(call.id, f"Buyurtma holati '{new_status}' ga o'zgartirildi!")
+            
+            updated_text = call.message.text + f"\n\n🟢 **YANGILANGAN HOLAT:** {new_status}"
+            bot.edit_message_text(updated_text, chat_id=call.message.chat.id, message_id=call.message.message_id)
+            
+            # Mijozga avtomatik bildirishnoma yuborish
+            try:
+                bot.send_message(user_id, f"📢 **Sizning buyurtmangiz holati yangilandi!**\n\n🆔 Buyurtma raqami: `#{order_id}`\n💼 Xizmat: {service}\n📌 Yangi holat: *{new_status}*")
+            except Exception:
+                pass
+        conn.close()
 
 @bot.message_handler(content_types=['contact'])
 def handle_contact(message):
@@ -107,14 +190,19 @@ def handle_text(message):
         return
 
     if message.text == "❌ Buyurtmani bekor qilish":
-        if user_id in user_data:
-            del user_data[user_id]
-        bot.send_message(message.chat.id, "❌ Buyurtma berish jarayoni bekor qilindi.")
+        if user_id in user_data: del user_data[user_id]
+        bot.send_message(message.chat.id, "❌ Amaliyot bekor qilindi.")
         bosh_menyu(message)
         return
 
-    if user_id in user_data and message.text != "✍️ Onlayn Buyurtma berish":
+    # Agar foydalanuvchi buyurtma berish bosqichida bo'lsa
+    if user_id in user_data and 'step' in user_data[user_id] and message.text != "✍️ Onlayn Buyurtma berish":
         process_order_steps(message)
+        return
+
+    # Agar foydalanuvchi buyurtma raqamini kiritib tekshirayotgan bo'lsa
+    if user_id in user_data and user_data[user_id].get('action') == 'checking_id':
+        process_checking_id(message)
         return
 
     if message.text == "📱 Ilovani yuklab olish":
@@ -137,14 +225,7 @@ def handle_text(message):
             "6️⃣ *Sertifikat, Diplom va Taklifnomalar:* \n"
             "└ 30 000 so'mdan — 250 000 so'mgacha\n\n"
             "⚙️ *Boshqa barcha turdagi grafik xizmatlar:* \n"
-            "• Firma stillari (Brandbook) yaratish\n"
-            "• Qadoq va etiketka (Packaging) dizayni\n"
-            "• Kitob, jurnal va kataloglarni sahifalash\n"
-            "• Futbolka, krujka va merch mahsulotlari uchun printlar\n"
-            "• Menu dizayni (Restoran va kafelar uchun)\n"
-            "• Vektorli illyustratsiyalar va chizmalar\n"
-            "• Fotosuratlarni professional retush qilish\n"
-            "• Telegram uchun maxsus rasm va sticker'lar\n\n"
+            "• Firma stillari (Brandbook) yaratish...\n\n"
             "💡 _Eslatma: Yakuniy narx buyurtmaning murakkabligi va muddatiga qarab o'zgarishi mumkin._"
         )
         bot.send_message(message.chat.id, narxlar_matni, parse_mode="Markdown")
@@ -156,9 +237,7 @@ def handle_text(message):
         
         portfolio_matni = (
             "📂 *ProVera Design — Bizning ishlarimiz bilan tanishing!*\n\n"
-            "Biz yaratgan eng sara logotiplar, SMM dizaynlar va brending loyihalarini "
-            "maxsus portfolio kanalimiz orqali to'g'ridan-to'g'ri kuzatishingiz mumkin. 👇\n\n"
-            "💡 _Kanalda ishlarni oson topish uchun #logo, #smm heshteglaridan foydalaning._"
+            "Biz yaratgan eng sara logotiplar maxsus portfolio kanalimizda! 👇"
         )
         bot.send_message(message.chat.id, portfolio_matni, parse_mode="Markdown", reply_markup=inline_portfolio)
         
@@ -168,37 +247,32 @@ def handle_text(message):
         btn_back = types.KeyboardButton("⬅️ Orqaga (Bosh menyu)")
         markup_aloqa.add(btn_new_order, btn_back)
         
-        inline_markup = types.InlineKeyboardMarkup()
-        url_button = types.InlineKeyboardButton(text="✍️ Logomasterga yozish", url="https://t.me/ProVera_Design_Admin")
-        inline_markup.add(url_button)
-        
         aloqa_matni = (
             "📞 Biz bilan bog'lanish:\n\n"
-            "Pastdagi '✍️ Onlayn Buyurtma berish' tugmasini bosib, bot orqali tezkor buyurtma qoldirishingiz mumkin.\n\n"
-            "Yoki to'g'ridan-to'g'ri admin bilan bog'laning:\n"
             "📱 Telefon: +998200271779 | +998200057207\n"
             "🤖 Telegram: @ProVera_Design_Admin"
         )
         bot.send_message(message.chat.id, aloqa_matni, reply_markup=markup_aloqa)
-        bot.send_message(message.chat.id, "Admin bilan to'g'ridan-to'g'ri suhbat ochish:", reply_markup=inline_markup)
 
     elif message.text == "✍️ Onlayn Buyurtma berish":
         user_data[user_id] = {'step': 1}
         markup_cancel = types.ReplyKeyboardMarkup(resize_keyboard=True)
         markup_cancel.add(types.KeyboardButton("❌ Buyurtmani bekor qilish"))
-        
         bot.send_message(message.chat.id, "📝 *1-Bosqich:* Ism va familiyangizni kiriting:", parse_mode="Markdown", reply_markup=markup_cancel)
+
+    elif message.text == "🔍 Tekshirish (Provera)":
+        user_data[user_id] = {'action': 'checking_id'}
+        markup_cancel = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        markup_cancel.add(types.KeyboardButton("❌ Buyurtmani bekor qilish"))
+        bot.send_message(message.chat.id, "🔍 *Buyurtma holatini tekshirish*\n\nIltimos, buyurtma berganingizda berilgan ID raqamni kiriting (Masalan: 1005):", parse_mode="Markdown", reply_markup=markup_cancel)
 
     elif message.text == "⬅️ Orqaga (Bosh menyu)":
         bosh_menyu(message)
         
     elif message.text == "ℹ️ Yordam":
-        bot.send_message(message.chat.id, "Sizga qanday yordam bera olaman? Muammo bo'lsa biz bilan bog'laning.")
-        
-    elif message.text == "🔍 Tekshirish (Provera)":
-        bot.send_message(message.chat.id, "Tekshirish tizimi ishga tushdi...")
+        bot.send_message(message.chat.id, "Sizga qanday yordam bera olaman? Muammo bo'lsa biz bilan bog'laning: @ProVera_Design_Admin")
     else:
-        bot.send_message(message.chat.id, "⚠️ *Noto'g'ri buyruq!* Iltimos, pastdagi tayyor menyu tugmalaridan birini bosing. 👇", parse_mode="Markdown")
+        bot.send_message(message.chat.id, "⚠️ Pastdagi tayyor menyu tugmalaridan birini bosing. 👇")
 
 def process_order_steps(message):
     user_id = message.from_user.id
@@ -207,80 +281,121 @@ def process_order_steps(message):
 
     if current_step == 1:
         if len(text) < 3 or any(char.isdigit() for char in text):
-            bot.send_message(message.chat.id, "❌ *Xato ism kiritildi!* Iltimos, ismingizni to'g'ri va faqat harflar bilan yozing:")
+            bot.send_message(message.chat.id, "❌ Ismingizni to'g'ri va faqat harflar bilan yozing:")
             return
-            
         user_data[user_id]['name'] = text
         user_data[user_id]['step'] = 2
-        
-        markup_cancel = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        markup_cancel.add(types.KeyboardButton("❌ Buyurtmani bekor qilish"))
-        bot.send_message(message.chat.id, "💼 *2-Bosqich:* Sizga qanday xizmat kerak? (Masalan: Logo, Vizitka, SMM dizayn):", parse_mode="Markdown", reply_markup=markup_cancel)
+        bot.send_message(message.chat.id, "💼 *2-Bosqich:* Sizga qanday xizmat kerak? (Masalan: Logo, Vizitka, SMM dizayn):", parse_mode="Markdown")
 
     elif current_step == 2:
         if len(text) < 2:
-            bot.send_message(message.chat.id, "❌ *Xato matn!* Iltimos, qanday dizayn xizmati kerakligini batafsilroq yozing:")
+            bot.send_message(message.chat.id, "❌ Qanday dizayn xizmati kerakligini batafsilroq yozing:")
             return
-            
         user_data[user_id]['service'] = text
         user_data[user_id]['step'] = 3
-        
         markup_phone = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        btn_phone = types.KeyboardButton("📱 Telefon raqamni yuborish", request_contact=True)
-        btn_cancel = types.KeyboardButton("❌ Buyurtmani bekor qilish")
-        markup_phone.add(btn_phone, btn_cancel)
-        
-        bot.send_message(message.chat.id, "📞 *3-Bosqich:* Telefon raqamingizni kiriting (Masalan: +998901234567) yoki pastdagi tugma orqali yuboring:", parse_mode="Markdown", reply_markup=markup_phone)
+        markup_phone.add(types.KeyboardButton("📱 Telefon raqamni yuborish", request_contact=True), types.KeyboardButton("❌ Buyurtmani bekor qilish"))
+        bot.send_message(message.chat.id, "📞 *3-Bosqich:* Telefon raqamingizni kiriting yoki pastdagi tugma orqali yuboring:", parse_mode="Markdown", reply_markup=markup_phone)
 
     elif current_step == 3:
         clean_phone = re.sub(r'[^\d+]', '', text)
         if len(clean_phone) < 9:
-            bot.send_message(message.chat.id, "❌ *Noto'g'ri telefon raqami!* Iltimos, raqamingizni to'g'ri formatda kiriting yoki pastdagi tugmani bosing:")
+            bot.send_message(message.chat.id, "❌ Noto'g'ri raqam! To'g'ri formatda kiriting:")
             return
-            
         user_data[user_id]['phone'] = clean_phone
         finish_order(message, user_id)
 
-@bot.message_handler(content_types=['photo', 'document', 'audio', 'video'])
-def handle_other_contents(message):
-    bot.send_message(message.chat.id, "⚠️ *Kutilmagan fayl yoki rasm!* Iltimos, faqat menyudagi tugmalardan foydalaning.")
+# BUYURTMANI STATUS BILAN TEKSHIRISH
+def process_checking_id(message):
+    user_id = message.from_user.id
+    text = message.text
+    
+    if not text.isdigit():
+        bot.send_message(message.chat.id, "❌ Noto'g'ri raqam kiritildi. Iltimos faqat sonlardan iborat ID kiriting:")
+        return
+        
+    order_id = int(text)
+    res = get_order_status(order_id)
+    
+    if res:
+        status, service = res
+        bot.send_message(
+            message.chat.id, 
+            f"📊 **Buyurtma ma'lumotlari:**\n\n"
+            f"🆔 Buyurtma raqami: `#{order_id}`\n"
+            f"💼 Xizmat turi: {service}\n"
+            f"📌 Hozirgi holati: *{status}*", 
+            parse_mode="Markdown"
+        )
+    else:
+        bot.send_message(message.chat.id, f"❌ Kechirasiz, tizimdan `#{order_id}` raqamli buyurtma topilmadi. Raqamni to'g'ri kiritganingizga ishonch hosil qiling.")
+    
+    if user_id in user_data: del user_data[user_id]
+    bosh_menyu(message)
 
 def finish_order(message, user_id):
     name = user_data[user_id]['name']
     service = user_data[user_id]['service']
     phone = user_data[user_id]['phone']
     
+    # Bazaga yozish va yangi unikal ID olish
+    order_id = add_order(user_id, name, service, phone)
+    
     raw_username = message.from_user.username
     username_text = f"@{raw_username}" if raw_username else "Mavjud emas"
     
+    # Adminlar guruhiga ketadigan xabar matni
     admin_matn = (
-        "🔥 YANGI BUYURTMA KELDI! 🔥\n\n"
+        f"🔔 **YANGI BUYURTMA KELDI (ID: #{order_id})** 🔔\n\n"
         f"👤 Mijoz: {name}\n"
         f"💼 Xizmat turi: {service}\n"
         f"📞 Telefon: {phone}\n"
         f"🤖 Telegram profili: {username_text}\n"
+        f"📌 Holati: ⌛ Kutilmoqda"
     )
     
+    # Guruh uchun inline status boshqaruv tugmalari
+    admin_inline = types.InlineKeyboardMarkup()
+    btn_process = types.InlineKeyboardButton("⚙️ Jarayonda", callback_data=f"set_process_{order_id}")
+    btn_ready = types.InlineKeyboardButton("✅ Tayyor", callback_data=f"set_ready_{order_id}")
+    admin_inline.add(btn_process, btn_ready)
+    
     try:
-        bot.send_message(ADMIN_CHAT_ID, admin_matn)
-        bot.send_message(message.chat.id, "🎉 Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi.\n\nTez orada loyiha menejerlarimiz siz bilan bog'lanishadi.")
+        bot.send_message(ADMIN_CHAT_ID, admin_matn, reply_markup=admin_inline)
+        bot.send_message(
+            message.chat.id, 
+            f"🎉 Rahmat! Buyurtmangiz muvaffaqiyatli qabul qilindi.\n\n"
+            f"🆔 Sizning buyurtma raqamingiz: `#{order_id}`\n"
+            f"Ushbu raqam orqali '🔍 Tekshirish' bo'limida ish holatini ko'rishingiz mumkin.",
+            parse_mode="Markdown"
+        )
     except Exception as e:
-        xato_xabar = f"⚠️ Tizimda xatolik! Guruhga xabar ketmadi.\nXatolik: {str(e)}"
-        bot.send_message(message.chat.id, xato_xabar)
+        bot.send_message(message.chat.id, "⚠️ Tizimda xatolik yuz berdi. Birozdan so'ng urinib ko'ring.")
         print(f"Xatolik: {e}")
         
-    if user_id in user_data:
-        del user_data[user_id]
+    if user_id in user_data: del user_data[user_id]
     bosh_menyu(message)
 
 @server.route('/')
 def webhook():
-    return "ProVera bot is running 24/7!", 200
+    return "ProVera bot with SQLite is running!", 200
+
+# ANTI-SLEEP (Uxlamaslik tizimi)
+def keep_alive():
+    URL = "https://" + os.environ.get("RENDER_EXTERNAL_HOSTNAME", "provera-bot.onrender.com")
+    time.sleep(20)
+    while True:
+        try:
+            requests.get(URL)
+        except Exception:
+            pass
+        time.sleep(300)
 
 def run_bot():
-    bot.infinity_polling(timeout=10, long_polling_timeout=5)
+    bot.infinity_polling(timeout=20, long_polling_timeout=10)
 
 if __name__ == "__main__":
     threading.Thread(target=run_bot, daemon=True).start()
+    threading.Thread(target=keep_alive, daemon=True).start()
     port = int(os.environ.get("PORT", 5000))
     server.run(host="0.0.0.0", port=port)
