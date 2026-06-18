@@ -1,15 +1,9 @@
 import telebot
 from telebot import types
-import os
-from flask import Flask
-import threading
 import time
 import sqlite3
 
-# 🌐 RENDER VEB-SERVERI
-server = Flask(__name__)
-
-# 🔑 API TOKEN VA ASOSIY SOZLAMALAR
+# 🔑 API TOKEN SOZLAMALARI
 TOKEN = '8760453840:AAF7GPFBVMEg0jvxa8hsKfdlaee1VI8V1IA'
 bot = telebot.TeleBot(TOKEN)
 
@@ -29,7 +23,7 @@ KARTA_MA'LUMOTLARI = (
 )
 
 user_data = {}
-DB_PATH = "/tmp/orders.db"
+DB_PATH = "orders.db"
 
 def init_db():
     try:
@@ -232,19 +226,6 @@ def finish_order(message, user_id):
     if user_id in user_data: del user_data[user_id]
     bosh_menyu(message)
 
-@server.route('/')
-def index():
-    return "Bot is running", 200
-
-def run_flask():
-    port = int(os.environ.get("PORT", 5000))
-    server.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
-
 if __name__ == "__main__":
-    # Flask alohida oqimda, polling esa asosiy oqimda ishlaydi (Ushbu kombinatsiya Render uchun o'limtik darajada barqaror)
-    threading.Thread(target=run_flask, daemon=True).start()
-    while True:
-        try:
-            bot.polling(none_stop=True, interval=1, timeout=20)
-        except Exception as e:
-            time.sleep(3)
+    print("Bot muvaffaqiyatli ishga tushdi...")
+    bot.infinity_polling(timeout=20, long_polling_timeout=10)
