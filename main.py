@@ -438,7 +438,7 @@ def webhook():
 
 def keep_alive():
     URL = "https://" + os.environ.get("RENDER_EXTERNAL_HOSTNAME", "provera-bot.onrender.com")
-    time.sleep(10)
+    time.sleep(15)
     while True:
         try:
             requests.get(URL, timeout=5)
@@ -447,26 +447,21 @@ def keep_alive():
         time.sleep(180)
 
 def run_bot():
-    while True:
-        try:
-            bot.infinity_polling(timeout=20, long_polling_timeout=10)
-        except Exception as e:
-            print(f"Polling xatosi tiklanyapti: {e}")
-            time.sleep(5)
-
-def delete_menu_button():
     try:
         url = f"https://api.telegram.org/bot{TOKEN}/deleteChatMenuButton"
         requests.post(url, timeout=5)
     except Exception:
         pass
+        
+    while True:
+        try:
+            bot.infinity_polling(timeout=20, long_polling_timeout=10)
+        except Exception as e:
+            time.sleep(5)
 
-# Render uchun asosiy kirish qismi Gunicorn orqali ishlaydi
-delete_menu_button()
-t1 = threading.Thread(target=run_bot, daemon=True)
-t2 = threading.Thread(target=keep_alive, daemon=True)
-t1.start()
-t2.start()
+# Avval botni oqimda, keyin Flaskni asosiy serverda ochamiz
+threading.Thread(target=run_bot, daemon=True).start()
+threading.Thread(target=keep_alive, daemon=True).start()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
