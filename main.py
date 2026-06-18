@@ -37,7 +37,7 @@ KARTA_MA'LUMOTLARI = (
 
 user_data = {}
 
-# 🗄 MA'LUMOTLAR BAZASINI SOZLASH
+# 🗄 MA'LUMOTLAR BAZASINI SOZLASH (RENDER REJIMIDA XAFVSIZ)
 def init_db():
     try:
         conn = sqlite3.connect("orders.db")
@@ -54,23 +54,29 @@ def init_db():
         ''')
         conn.commit()
         conn.close()
+        print("Ma'lumotlar bazasi muvaffaqiyatli tekshirildi/yaratildi.")
     except Exception as e:
-        print(f"Baza yaratishda xato: {e}")
+        print(f"Baza yaratishda jiddiy xato: {e}")
 
+# Kod ishga tushishi bilan birinchi bo'lib bazani tekshiramiz
 init_db()
 
 # BAZA BILAN ISHLASH FUNKSIYALARI
 def add_order(user_id, name, service, phone):
-    conn = sqlite3.connect("orders.db")
-    cursor = conn.cursor()
-    cursor.execute(
-        "INSERT INTO orders (user_id, name, service, phone, status) VALUES (?, ?, ?, ?, ?)",
-        (user_id, name, service, phone, "⌛ Kutilmoqda")
-    )
-    order_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-    return order_id
+    try:
+        conn = sqlite3.connect("orders.db")
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO orders (user_id, name, service, phone, status) VALUES (?, ?, ?, ?, ?)",
+            (user_id, name, service, phone, "⌛ Kutilmoqda")
+        )
+        order_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        return order_id
+    except Exception as e:
+        print(f"Buyurtma qo'shishda xato: {e}")
+        return 0
 
 def get_order_status(order_id):
     try:
@@ -80,7 +86,8 @@ def get_order_status(order_id):
         res = cursor.fetchone()
         conn.close()
         return res
-    except Exception:
+    except Exception as e:
+        print(f"Status tekshirishda xato: {e}")
         return None
 
 def check_sub(user_id):
@@ -459,7 +466,7 @@ def run_bot():
         except Exception as e:
             time.sleep(5)
 
-# Avval botni oqimda, keyin Flaskni asosiy serverda ochamiz
+# Avval botni alohida oqimda, keyin Flaskni asosiy serverda ochamiz
 threading.Thread(target=run_bot, daemon=True).start()
 threading.Thread(target=keep_alive, daemon=True).start()
 
