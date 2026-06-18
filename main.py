@@ -1,7 +1,17 @@
 import telebot
 from telebot import types
+import os
 import time
 import sqlite3
+from flask import Flask
+import threading
+
+# 🌐 RENDER UCHUN MAJBURIY VEB-SERVER
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "ProVera Bot Is Alive!", 200
 
 # 🔑 API TOKEN SOZLAMALARI
 TOKEN = '8760453840:AAF7GPFBVMEg0jvxa8hsKfdlaee1VI8V1IA'
@@ -23,7 +33,7 @@ KARTA_MA'LUMOTLARI = (
 )
 
 user_data = {}
-DB_PATH = "orders.db"
+DB_PATH = "/tmp/orders.db"  # Render o'chirib yubormaydigan xavfsiz vaqtinchalik joy
 
 def init_db():
     try:
@@ -179,53 +189,4 @@ def handle_text(message):
         bot.send_message(message.chat.id, "📝 Ism va familiyangizni kiriting:", reply_markup=m)
     elif message.text == "🔍 Tekshirish (Provera)":
         user_data[user_id] = {'action': 'checking_id'}
-        m = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        m.add(types.KeyboardButton("❌ Buyurtmani bekor qilish"))
-        bot.send_message(message.chat.id, "🔍 Buyurtma ID raqamini kiriting:", reply_markup=m)
-    elif message.text == "⬅️ Orqaga (Bosh menyu)":
-        bosh_menyu(message)
-
-def process_order_steps(message):
-    user_id = message.from_user.id
-    step = user_data[user_id]['step']
-    if step == 1:
-        user_data[user_id]['name'] = message.text
-        user_data[user_id]['step'] = 2
-        bot.send_message(message.chat.id, "💼 Qanday xizmat kerak? (Masalan: Logo Pro):")
-    elif step == 2:
-        user_data[user_id]['service'] = message.text
-        user_data[user_id]['step'] = 3
-        m = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        m.add(types.KeyboardButton("📱 Telefon raqamni yuborish", request_contact=True), types.KeyboardButton("❌ Buyurtmani bekor qilish"))
-        bot.send_message(message.chat.id, "📞 Telefon raqamingizni yuboring yoki yozing:", reply_markup=m)
-    elif step == 3:
-        user_data[user_id]['phone'] = message.text
-        finish_order(message, user_id)
-
-def process_checking_id(message):
-    user_id = message.from_user.id
-    if message.text.isdigit():
-        res = get_order_status(int(message.text))
-        if res: bot.send_message(message.chat.id, f"🆔 ID: #{message.text}\n💼 Xizmat: {res[1]}\n📌 Holat: *{res[0]}*", parse_mode="Markdown")
-        else: bot.send_message(message.chat.id, "❌ Topilmadi.")
-    if user_id in user_data: del user_data[user_id]
-    bosh_menyu(message)
-
-def finish_order(message, user_id):
-    name, service, phone = user_data[user_id]['name'], user_data[user_id]['service'], user_data[user_id]['phone']
-    order_id = add_order(user_id, name, service, phone)
-    username = f"@{message.from_user.username}" if message.from_user.username else "Mavjud emas"
-    
-    admin_matn = f"🔔 **YANGI BUYURTMA (ID: #{order_id})**\n\n👤 Mijoz: {name}\n💼 Xizmat: {service}\n📞 Tel: {phone}\n🤖 Profil: {username}"
-    m = types.InlineKeyboardMarkup()
-    m.add(types.InlineKeyboardButton("⚙️ Jarayonda", callback_data=f"set_process_{order_id}"), types.InlineKeyboardButton("⏳ To'lov kutilmoqda", callback_data=f"set_payment_{order_id}"), types.InlineKeyboardButton("✅ Tayyor", callback_data=f"set_ready_{order_id}"))
-    
-    try: bot.send_message(ADMIN_CHAT_ID, admin_matn, reply_markup=m)
-    except Exception: pass
-    bot.send_message(message.chat.id, f"🎉 Muvaffaqiyatli qabul qilindi. ID: `#{order_id}`", parse_mode="Markdown")
-    if user_id in user_data: del user_data[user_id]
-    bosh_menyu(message)
-
-if __name__ == "__main__":
-    print("Bot muvaffaqiyatli ishga tushdi...")
-    bot.infinity_polling(timeout=20, long_polling_timeout=10)
+        m = types.Reply
