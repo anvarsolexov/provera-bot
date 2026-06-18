@@ -24,6 +24,16 @@ PORTFOLIO_KANAL = "ProVera_Design_Portfolio"
 
 # Guruh ID raqami (Buyurtmalar tushadigan guruh)
 ADMIN_CHAT_ID = "-1003997246734"  
+ADMIN_USERNAME = "@ProVera_Design_Admin"
+
+# 💳 KARTA MA'LUMOTLARI
+KARTA_MA'LUMOTLARI = (
+    "💳 **To'lov uchun karta ma'lumotlari:**\n\n"
+    "• Karta raqami: `5614681856371004`\n"
+    "• Ism-sharif: Anvar Solexov\n"
+    "• Bank: HamkorBank / Uzcard\n\n"
+    "⚠️ **Muhim:** To'lovni amalga oshirgach, to'lov chekini (skrinshot) aynan shu yerga rasm ko'rinishida yuboring!"
+)
 
 user_data = {}
 
@@ -142,7 +152,12 @@ def callback_handler(call):
         status_type = parts[1]
         order_id = parts[2]
         
-        new_status = "⚙️ Jarayonda" if status_type == "process" else "✅ Tayyor"
+        if status_type == "process":
+            new_status = "⚙️ Jarayonda"
+        elif status_type == "payment":
+            new_status = "⏳ To'lov qilinishi kutilmoqda"
+        else:
+            new_status = "✅ Tayyor"
         
         conn = sqlite3.connect("orders.db")
         cursor = conn.cursor()
@@ -154,7 +169,7 @@ def callback_handler(call):
             cursor.execute("UPDATE orders SET status = ? WHERE id = ?", (new_status, order_id))
             conn.commit()
             
-            bot.answer_callback_query(call.id, f"Buyurtma holati '{new_status}' ga o'zgartirildi!")
+            bot.answer_callback_query(call.id, f"Buyurtma holati o'zgartirildi!")
             
             raw_username = "Mavjud emas"
             if "🤖 Telegram profili: " in call.message.text:
@@ -172,18 +187,36 @@ def callback_handler(call):
                 f"📌 **HOZIRGI HOLAT:** {new_status}"
             )
             
+            next_inline = types.InlineKeyboardMarkup()
             if status_type == "process":
-                next_inline = types.InlineKeyboardMarkup()
+                btn_pay = types.InlineKeyboardButton("⏳ To'lov kutilmoqda", callback_data=f"set_payment_{order_id}")
+                btn_ready = types.InlineKeyboardButton("✅ Tayyor", callback_data=f"set_ready_{order_id}")
+                next_inline.add(btn_pay, btn_ready)
+                bot.edit_message_text(updated_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=next_inline)
+            
+            elif status_type == "payment":
                 btn_ready = types.InlineKeyboardButton("✅ Tayyor deb belgilash", callback_data=f"set_ready_{order_id}")
                 next_inline.add(btn_ready)
                 bot.edit_message_text(updated_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=next_inline)
+                
+                # MIJOZGA KARTA MA'LUMOTLARINI YUBORISH
+                try:
+                    mijoz_matni = (
+                        f"🎉 **Xushxabar!** Sizning **#{order_id}** sonli buyurtmangiz dizaynerlarimiz tomonidan qabul qilindi.\n\n"
+                        f"Ishni boshlashimiz uchun to'lovni amalga oshirishingiz so'raladi:\n\n"
+                        f"{KARTA_MA'LUMOTLARI}"
+                    )
+                    bot.send_message(user_id, mijoz_matni, parse_mode="Markdown")
+                except Exception:
+                    pass
             else:
                 bot.edit_message_text(updated_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
             
-            try:
-                bot.send_message(user_id, f"📢 **Sizning buyurtmangiz holati yangilandi!**\n\n🆔 Buyurtma raqami: `#{order_id}`\n💼 Xizmat: {service}\n📌 Yangi holat: *{new_status}*")
-            except Exception:
-                pass
+            if status_type != "payment":
+                try:
+                    bot.send_message(user_id, f"📢 **Sizning buyurtmangiz holati yangilandi!**\n\n🆔 Buyurtma raqami: `#{order_id}`\n💼 Xizmat: {service}\n📌 Yangi holat: *{new_status}*", parse_mode="Markdown")
+                except Exception:
+                    pass
         conn.close()
 
 @bot.message_handler(content_types=['contact'])
@@ -227,23 +260,30 @@ def handle_text(message):
         
     elif message.text == "💰 Xizmatlar va Narxlar":
         narxlar_matni = (
-            "✨ *ProVera Design — Grafik dizayn xizmatlari va narxlari:* \n\n"
-            "🔥 *Asosiy xizmatlarimiz:* \n"
-            "1️⃣ *Logo yaratish (Brending):* \n"
-            "└ 50 000 so'mdan — 500 000 so'mgacha\n\n"
-            "2️⃣ *Vizitkalar va Korporativ kartalar:* \n"
-            "└ 60 000 so'mdan — 800 000 so'mgacha\n\n"
-            "3️⃣ *Banner, Flayer va Bukletlar (Poligrafiya):* \n"
-            "└ 100 000 so'mdan — 700 000 so'mgacha\n\n"
-            "4️⃣ *SMM postlar va Storizlar uchun dizayn:* \n"
-            "└ 40 000 so'mdan — 300 000 so'mgacha\n\n"
-            "5️⃣ *Tashqi reklama (Bilbord va Vitrina dizayni):* \n"
-            "└ 150 000 so'mdan — 1 200 000 so'mgacha\n\n"
-            "6️⃣ *Sertifikat, Diplom va Taklifnomalar:* \n"
-            "└ 30 000 so'mdan — 250 000 so'mgacha\n\n"
-            "⚙️ *Boshqa barcha turdagi grafik xizmatlar:* \n"
-            "• Firma stillari (Brandbook) yaratish...\n\n"
-            "💡 _Eslatma: Yakuniy narx buyurtmaning murakkabligi va muddatiga qarab o'zgarishi mumkin._"
+            "✨ *ProVera Design — Yangilangan Grafik dizayn narxlari va Kombolar:* \n\n"
+            "🔥 *5 ta Asosiy Paketlarimiz:* \n\n"
+            "1️⃣ *Logotip 'Start' Paket:* \n"
+            "└ Narxi: **350 000 so'm**\n"
+            "_(2 xil variant, sifatli dizayn, 2 marta bepul tahrirlash)_\n\n"
+            "2️⃣ *Logotip 'Pro' Paket:* \n"
+            "└ Narxi: **600 000 so'm**\n"
+            "_(3 xil kreativ variant, 3D Mockup, vektor format, cheksiz tahrirlar)_\n\n"
+            "3️⃣ *Eksklyuziv Vizitkalar:* \n"
+            "└ Narxi: **200 000 so'm**\n"
+            "_(Ikki tomonlama zamonaviy va bosmaga tayyor formatda)_\n\n"
+            "4️⃣ *🔥 Kombo 'Start' (Logo + Vizitka):* \n"
+            "└ Narxi: **500 000 so'm**\n"
+            "_(Logotip 'Start' + Vizitka dizayni. Alohida olgandan ko'ra ancha arzon!)_\n\n"
+            "5️⃣ *💎 Kombo 'Premium' (To'liq Brending):* \n"
+            "└ Narxi: **950 000 so'm**\n"
+            "_(Logotip 'Pro' + Vizitka + Korporativ uslub va ranglar + ijtimoiy tarmoqlar uchun avatar)_\n\n"
+            "⚙️ *Qolgan barcha turdagi xizmatlarimiz:* \n"
+            "• Banner, Flayer va Bukletlar (Poligrafiya) — **Narxi kelishiladi**\n"
+            "• SMM postlar va Storizlar uchun dizayn — **Narxi kelishiladi**\n"
+            "• Tashqi reklama (Bilbord va Vitrina dizayni) — **Narxi kelishiladi**\n"
+            "• Sertifikat, Diplom va Taklifnomalar — **Narxi kelishiladi**\n"
+            "• Firma stillari (Brandbook) va qadoq dizayni — **Narxi kelishiladi**\n\n"
+            f"💡 _Maxsus va nostandart buyurtmalar bo'yicha to'g'ridan-to'g'ri adminga yozishingiz mumkin:_ {ADMIN_USERNAME}"
         )
         bot.send_message(message.chat.id, narxlar_matni, parse_mode="Markdown")
         
@@ -267,7 +307,7 @@ def handle_text(message):
         aloqa_matni = (
             "📞 Biz bilan bog'lanish:\n\n"
             "📱 Telefon: +998200271779 | +998200057207\n"
-            "🤖 Telegram: @ProVera_Design_Admin"
+            f"🤖 Telegram: {ADMIN_USERNAME}"
         )
         bot.send_message(message.chat.id, aloqa_matni, reply_markup=markup_aloqa)
 
@@ -287,7 +327,7 @@ def handle_text(message):
         bosh_menyu(message)
         
     elif message.text == "ℹ️ Yordam":
-        bot.send_message(message.chat.id, "Sizga qanday yordam bera olaman? Muammo bo'lsa biz bilan bog'laning: @ProVera_Design_Admin")
+        bot.send_message(message.chat.id, f"Sizga qanday yordam bera olaman? Muammo bo'lsa biz bilan bog'laning: {ADMIN_USERNAME}")
     else:
         bot.send_message(message.chat.id, "⚠️ Pastdagi tayyor menyu tugmalaridan birini bosing. 👇")
 
@@ -302,7 +342,7 @@ def process_order_steps(message):
             return
         user_data[user_id]['name'] = text
         user_data[user_id]['step'] = 2
-        bot.send_message(message.chat.id, "💼 *2-Bosqich:* Sizga qanday xizmat kerak? (Masalan: Logo, Vizitka, SMM dizayn):", parse_mode="Markdown")
+        bot.send_message(message.chat.id, "💼 *2-Bosqich:* Sizga qanday xizmat kerak? (Masalan: Logo Start, Logo Pro, Vizitka, Premium Kombo yoki Boshqa):", parse_mode="Markdown")
 
     elif current_step == 2:
         if len(text) < 2:
@@ -371,8 +411,9 @@ def finish_order(message, user_id):
     
     admin_inline = types.InlineKeyboardMarkup()
     btn_process = types.InlineKeyboardButton("⚙️ Jarayonda", callback_data=f"set_process_{order_id}")
+    btn_pay = types.InlineKeyboardButton("⏳ To'lov kutilmoqda", callback_data=f"set_payment_{order_id}")
     btn_ready = types.InlineKeyboardButton("✅ Tayyor", callback_data=f"set_ready_{order_id}")
-    admin_inline.add(btn_process, btn_ready)
+    admin_inline.add(btn_process, btn_pay, btn_ready)
     
     try:
         bot.send_message(ADMIN_CHAT_ID, admin_matn, reply_markup=admin_inline)
