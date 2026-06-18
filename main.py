@@ -90,21 +90,20 @@ def check_sub(user_id):
             return True
         return False
     except Exception as e:
-        print(f"Obunani tekshirishda xatolik: {e}")
+        print(f"Obunani tekshirishda texnik xatolik: {e}")
         return True
 
 def bosh_menyu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    btn1 = types.KeyboardButton("📱 Ilovani yuklab olish")
-    btn2 = types.KeyboardButton("💰 Xizmatlar va Narxlar")
-    btn3 = types.KeyboardButton("📂 Portfolio (Bizning ishlar)")
-    btn4 = types.KeyboardButton("📞 Buyurtma berish / Aloqa")
-    btn5 = types.KeyboardButton("🔍 Tekshirish (Provera)")
-    btn6 = types.KeyboardButton("ℹ️ Yordam")
+    btn1 = types.KeyboardButton("💰 Xizmatlar va Narxlar")
+    btn2 = types.KeyboardButton("📂 Portfolio (Bizning ishlar)")
+    btn3 = types.KeyboardButton("📞 Buyurtma berish / Aloqa")
+    btn4 = types.KeyboardButton("🔍 Tekshirish (Provera)")
+    btn5 = types.KeyboardButton("ℹ️ Yordam")
     
     markup.add(btn1, btn2)
     markup.add(btn3, btn4)
-    markup.add(btn5, btn6)
+    markup.add(btn5)
     
     bot.send_message(
         message.chat.id, 
@@ -257,10 +256,7 @@ def handle_text(message):
         process_checking_id(message)
         return
 
-    if message.text == "📱 Ilovani yuklab olish":
-        bot.send_message(message.chat.id, "Ilovani yuklab olish uchun havola: https://share.google/yYkrudNSAmI7V...")
-        
-    elif message.text == "💰 Xizmatlar va Narxlar":
+    if message.text == "💰 Xizmatlar va Narxlar":
         narxlar_matni = (
             "✨ *ProVera Design — Yangilangan Grafik dizayn narxlari va Kombolar:* \n\n"
             "🔥 *5 ta Asosiy Paketlarimiz:* \n\n"
@@ -465,14 +461,13 @@ def delete_menu_button():
     except Exception:
         pass
 
+# Render uchun asosiy kirish qismi Gunicorn orqali ishlaydi
+delete_menu_button()
+t1 = threading.Thread(target=run_bot, daemon=True)
+t2 = threading.Thread(target=keep_alive, daemon=True)
+t1.start()
+t2.start()
+
 if __name__ == "__main__":
-    delete_menu_button()
-    
-    # Oqimlarni xavfsiz ishga tushirish
-    t1 = threading.Thread(target=run_bot, daemon=True)
-    t2 = threading.Thread(target=keep_alive, daemon=True)
-    t1.start()
-    t2.start()
-    
     port = int(os.environ.get("PORT", 5000))
     server.run(host="0.0.0.0", port=port)
