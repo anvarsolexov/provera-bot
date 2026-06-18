@@ -190,3 +190,79 @@ def handle_text(message):
     elif message.text == "🔍 Tekshirish (Provera)":
         user_data[user_id] = {'action': 'checking_id'}
         m = types.Reply
+    elif message.text == "🔍 Tekshirish (Provera)":
+        user_data[user_id] = {'action': 'checking_id'}
+        m = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        m.add(types.KeyboardButton("❌ Buyurtmani bekor qilish"))
+        bot.send_message(message.chat.id, "🔍 Buyurtma ID raqamini kiriting:", reply_markup=m)
+    elif message.text == "⬅️ Orqaga (Bosh menyu)":
+        bosh_menyu(message)
+    elif message.text == "ℹ️ Yordam":
+        bot.send_message(message.chat.id, f"Muammolar yuzaga kelsa yoki savollaringiz bo'lsa, biz bilan bog'laning:\n🤖 Admin: {ADMIN_USERNAME}")
+
+# 📋 BUYURTMA BOSQICHLARI
+def process_order_steps(message):
+    user_id = message.from_user.id
+    step = user_data[user_id]['step']
+    if step == 1:
+        user_data[user_id]['name'] = message.text
+        user_data[user_id]['step'] = 2
+        bot.send_message(message.chat.id, "💼 Qanday xizmat kerak? (Masalan: Logo Pro):")
+    elif step == 2:
+        user_data[user_id]['service'] = message.text
+        user_data[user_id]['step'] = 3
+        m = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        m.add(types.KeyboardButton("📱 Telefon raqamni yuborish", request_contact=True), types.KeyboardButton("❌ Buyurtmani bekor qilish"))
+        bot.send_message(message.chat.id, "📞 Telefon raqamingizni yuboring yoki yozing:", reply_markup=m)
+    elif step == 3:
+        user_data[user_id]['phone'] = message.text
+        finish_order(message, user_id)
+
+# 🔍 ID ORQALI BUYURTMANI TEKSHIRISH
+def process_checking_id(message):
+    user_id = message.from_user.id
+    if message.text.isdigit():
+        res = get_order_status(int(message.text))
+        if res: bot.send_message(message.chat.id, f"🆔 ID: #{message.text}\n💼 Xizmat: {res[1]}\n📌 Holat: *{res[0]}*", parse_mode="Markdown")
+        else: bot.send_message(message.chat.id, "❌ Bunday raqamli buyurtma topilmadi.")
+    if user_id in user_data: del user_data[user_id]
+    bosh_menyu(message)
+
+# 🏁 BUYURTMANI YAKUNLASH
+def finish_order(message, user_id):
+    name, service, phone = user_data[user_id]['name'], user_data[user_id]['service'], user_data[user_id]['phone']
+    order_id = add_order(user_id, name, service, phone)
+    username = f"@{message.from_user.username}" if message.from_user.username else "Mavjud emas"
+    
+    admin_matn = f"🔔 **YANGI BUYURTMA (ID: #{order_id})**\n\n👤 Mijoz: {name}\n💼 Xizmat: {service}\n📞 Tel: {phone}\n🤖 Profil: {username}"
+    m = types.InlineKeyboardMarkup()
+    m.add(
+        types.InlineKeyboardButton("⚙️ Jarayonda", callback_data=f"set_process_{order_id}"), 
+        types.InlineKeyboardButton("⏳ To'lov kutilmoqda", callback_data=f"set_payment_{order_id}"), 
+        types.InlineKeyboardButton("✅ Tayyor", callback_data=f"set_ready_{order_id}")
+    )
+    
+    try: bot.send_message(ADMIN_CHAT_ID, admin_matn, reply_markup=m)
+    except Exception: pass
+    bot.send_message(message.chat.id, f"🎉 Muvaffaqiyatli qabul qilindi. ID: `#{order_id}`", parse_mode="Markdown")
+    if user_id in user_data: del user_data[user_id]
+    bosh_menyu(message)
+
+# 🚀 BOTNI ALOHIDA OQIMDA ISHGA TUSHIRISH FUNKSIYASI
+def run_bot():
+    while True:
+        try:
+            bot.polling(none_stop=True, interval=1, timeout=20)
+        except Exception as e:
+            print(f"Polling xatosi: {e}")
+            time.sleep(5)
+
+if __name__ == "__main__":
+    # 1. Telegram bot polling tizimini alohida orqa fonda (Thread) boshlaymiz
+    bot_thread = threading.Thread(target=run_bot)
+    bot_thread.daemon = True
+    bot_thread.start()
+    
+    # 2. Flask veb-serverini asosiy oqimda Render porti bilan ulaymiz (Render o'chirib qo'ymasligi uchun)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
