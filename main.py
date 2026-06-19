@@ -117,10 +117,11 @@ def send_welcome(message):
     bot.send_message(message.chat.id, "Assalomu aleykum! ProVera botiga xush kelibsiz!")
     bosh_menyu(message)
 
-# 🟢 KANALDA ADMIN TUGMALARINI BOSGANDA ISHLAYDIGAN QISM
+# 🟢 CALL BACK REAKSIYALARI (ADMIN VA MIJOZ TUGMALARI)
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
-    # 1. BUYURTMANI QABUL QILISH TUGMASI BOSILGANDA
+    
+    # 1. ADMIN BUYURTMANI QABUL QILGANDA
     if call.data.startswith("accept_"):
         order_id = call.data.split("_")[1]
         new_status = "⚙️ Jarayonda (Admin qabul qildi)"
@@ -154,12 +155,7 @@ def callback_handler(call):
                 f"🟢 **HOLAT:** Admin ({admin_user}) soat {current_time} da to'lovni tasdiqladi va ishni qabul qildi!"
             )
             
-            bot.edit_message_caption(
-                chat_id=call.message.chat.id, 
-                message_id=call.message.message_id, 
-                caption=updated_caption, 
-                reply_markup=None
-            )
+            bot.edit_message_caption(chat_id=call.message.chat.id, message_id=call.message.message_id, caption=updated_caption, reply_markup=None)
             bot.answer_callback_query(call.id, "Buyurtma jarayonga olindi!")
             
             try:
@@ -175,7 +171,7 @@ def callback_handler(call):
                 pass
         conn.close()
 
-    # 2. TO'LOVNI RAD ETISH TUGMASI BOSILGANDA (SOXTA CHEKLAR UCHUN)
+    # 2. ADMIN TO'LOVNI RAD ETGANDA (SOXTA CHEK HOLATI)
     elif call.data.startswith("reject_"):
         order_id = call.data.split("_")[1]
         new_status = "❌ Rad etildi (To'lov tasdiqlanmadi)"
@@ -209,26 +205,46 @@ def callback_handler(call):
                 f"🔴 **HOLAT:** Admin ({admin_user}) soat {current_time} da to'lovni rad etdi (Chek soxta yoki pul tushmagan)!"
             )
             
-            bot.edit_message_caption(
-                chat_id=call.message.chat.id, 
-                message_id=call.message.message_id, 
-                caption=updated_caption, 
-                reply_markup=None
-            )
+            bot.edit_message_caption(chat_id=call.message.chat.id, message_id=call.message.message_id, caption=updated_caption, reply_markup=None)
             bot.answer_callback_query(call.id, "Buyurtma rad etildi!")
             
             try:
+                # 🔄 MIJOZGA QAYTA YUBORISH TUGMASI
+                retry_inline = types.InlineKeyboardMarkup()
+                retry_inline.add(types.InlineKeyboardButton("🔄 Chekni qayta yuborish", callback_data=f"retry_{name}_{service}_{phone}"))
+                
                 user_msg = (
                     f"❌ **Ogohlantirish! Siz yuborgan to'lov cheki admin tomonidan tasdiqlanmadi.**\n\n"
                     f"🆔 Buyurtma raqami: `#{order_id}`\n"
                     f"💼 Xizmat: {service}\n"
                     f"📌 Holati: *To'lov rad etildi*\n\n"
-                    f"⚠️ Iltimos, to'lovni qayta tekshirib, haqiqiy chekni yuboring yoki adminga murojaat qiling: @ProVera_Design_Admin"
+                    f"⚠️ Siz yuborgan rasmda xatolik bo'lishi mumkin. Haqiqiy to'lov chekini (skrinshotini) qayta yuborish uchun pastdagi tugmani bosing:"
                 )
-                bot.send_message(user_id, user_msg, parse_mode="Markdown")
+                bot.send_message(user_id, user_msg, parse_mode="Markdown", reply_markup=retry_inline)
             except Exception:
                 pass
         conn.close()
+
+    # 3. MIJOZ "CHEKNI QAYTA YUBORISH" TUGMASINI BOSGANDA
+    elif call.data.startswith("retry_"):
+        _, name, service, phone = call.data.split("_")
+        user_id = call.from_user.id
+        
+        # Mijozni qaytadan 4-bosqichga tizimga kiritamiz
+        user_data[user_id] = {
+            'step': 4,
+            'name': name,
+            'service': service,
+            'phone': phone
+        }
+        
+        # Tugmani olib tashlash uchun eski xabarni o'chirish yoki tahrirlash
+        try:
+            bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
+        except Exception:
+            pass
+            
+        goToPaymentStep(call.message, user_id)
 
 @bot.message_handler(content_types=['contact'])
 def handle_contact(message):
@@ -261,7 +277,6 @@ def handle_photo(message):
             f"⚖️ Shart: 50% avans bo'lsa, yakunda tiniq format berilmaydi!"
         )
         
-        # 📊 IKKITA TUGMA: QABUL QILISH VA RAD ETISH
         kanal_inline = types.InlineKeyboardMarkup(row_width=1)
         btn_accept = types.InlineKeyboardButton("🟢 Qabul qilindi (Jarayonga olish)", callback_data=f"accept_{order_id}")
         btn_reject = types.InlineKeyboardButton("❌ Rad etildi (To'lov tasdiqlanmadi)", callback_data=f"reject_{order_id}")
@@ -429,7 +444,10 @@ def goToPaymentStep(message, user_id):
         f"👤 Karta egasi: *{KARTA_EGASI}*\n\n"
         f"📥 To'lovni amalga oshirgach, **to'lov chekini (skrinshotini) mana shu yerga rasm ko'rinishida yuboring:**"
     )
-    bot.send_message(message.chat.id, payment_text, parse_mode="Markdown", reply_markup=markup_cancel)
+    
+    # Agar chat_id bo'lsa (callback orqali chaqirilganda) o'sha chatga yuboradi
+    chat_id = message.chat.id if hasattr(message, 'chat') else message.from_user.id
+    bot.send_message(chat_id, payment_text, parse_mode="Markdown", reply_markup=markup_cancel)
 
 def process_checking_id(message):
     user_id = message.from_user.id
