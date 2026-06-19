@@ -11,8 +11,8 @@ import sqlite3
 # Render veb-serveri
 server = Flask(__name__)
 
-# 🔑 API TOKEN
-TOKEN = '8760453840:AAF7GPFBVMEg0jvxa8hsKfdlaee1VI8V1IA'
+# 🔑 YANGI API TOKEN
+TOKEN = '8760453840:AAFoZjg_2tYnNZRktZJomB6Ef3XrNiLabXQ'
 bot = telebot.TeleBot(TOKEN)
 
 # 📂 PORTFOLIO KANALI
