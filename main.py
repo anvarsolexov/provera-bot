@@ -9,8 +9,8 @@ import sqlite3
 # 🌐 Render xatolik bermasligi uchun Flask veb-serveri
 server = Flask(__name__)
 
-# 🔑 TELEGRAM BOT TOKEN
-TOKEN = '8760453840:AAFoZjg_2tYnNZRktZJomB6Ef3XrNiLabXQ'
+# 🔑 TELEGRAM BOT TOKEN (YANGILANDI)
+TOKEN = '8760453840:AAHkfjYO_xzHW7Igk1vZxE8gfoY6zYsj0Tg'
 bot = telebot.TeleBot(TOKEN)
 
 # 📂 PORTFOLIO KANALI LINKI
@@ -160,7 +160,7 @@ def handle_contact(message):
     else:
         bot.send_message(message.chat.id, "⚠️ Hozir telefon raqam yuborish bosqichi emas.")
 
-# Matnli xabarlarni qayta ishlash boshqaruvi (Barcha matn va buyruqlar shu yerda)
+# Matnli xabarlarni qayta ishlash boshqaruvi
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
     user_id = message.from_user.id
@@ -180,7 +180,7 @@ def handle_text(message):
         process_checking_id(message)
         return
 
-    # 1. ILOVA YUKLAB OLISH BO'LIMI (TO'LIQ INLINE TUGMASI BILAN)
+    # 1. ILOVA YUKLAB OLISH BO'LIMI
     if message.text == "📱 Ilovani yuklab olish":
         inline_ilova = types.InlineKeyboardMarkup()
         btn_link = types.InlineKeyboardButton("📥 Yuklab olish (Google Drive)", url="https://share.google/yYkrudNSAmI7V...")
@@ -191,7 +191,7 @@ def handle_text(message):
             reply_markup=inline_ilova
         )
         
-    # 2. XIZMATLAR VA NARXLAR BO'LIMI (TO'LIQ ASLIY MATNI)
+    # 2. XIZMATLAR VA NARXLAR BO'LIMI
     elif message.text == "💰 Xizmatlar va Narxlar":
         narxlar_matni = (
             "✨ *ProVera Design — Grafik dizayn xizmatlari va narxlari:* \n\n"
@@ -255,7 +255,7 @@ def handle_text(message):
         user_data[user_id] = {'action': 'checking_id'}
         markup_cancel = types.ReplyKeyboardMarkup(resize_keyboard=True)
         markup_cancel.add(types.KeyboardButton("❌ Buyurtmani bekor qilish"))
-        bot.send_message(message.chat.id, "🔍 *Buyurtma holatini tekshirish*\n\nIltimos, buyurtma berganingizda berilgan ID raqamni kiriting (Masalan: 1005):", parse_mode="Markdown", reply_markup=markup_cancel)
+        bot.send_message(message.chat.id, "🔍 *Buyurtma holatini tekshirish*\n\nIltimos, buyurtma berganingizda berilgan ID raqamni kiriting (Masalan: 1):", parse_mode="Markdown", reply_markup=markup_cancel)
 
     elif message.text == "⬅️ Orqaga (Bosh menyu)":
         bosh_menyu(message)
