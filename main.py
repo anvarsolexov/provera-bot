@@ -5,6 +5,7 @@ from flask import Flask
 import threading
 import re
 import sqlite3
+from datetime import datetime
 
 # 🌐 Render xatolik bermasligi uchun Flask veb-serveri
 server = Flask(__name__)
@@ -23,8 +24,13 @@ except Exception as e:
 # 📂 PORTFOLIO KANALI LINKI
 PORTFOLIO_KANAL = "ProVera_Design_Portfolio"  
 
-# 👥 ADMIN GURUHI CHAT ID RAQAMI
+# 📢 BUYURTMALAR TUSHADIGAN KANAL ID (YOKI @KANAL_LINKI)
+# Bot ushbu kanalda administrator bo'lishi shart!
 ADMIN_CHAT_ID = "-1003997246734"  
+
+# 💳 TO'LOV MA'LUMOTLARI
+KARTA_RAQAM = "5614 6818 5637 1004"
+KARTA_EGASI = "Anvar Solexov"
 
 # Foydalanuvchilar bosqichlarini saqlash uchun lug'at
 user_data = {}
@@ -53,7 +59,7 @@ def add_order(user_id, name, service, phone):
     cursor = conn.cursor()
     cursor.execute(
         "INSERT INTO orders (user_id, name, service, phone, status) VALUES (?, ?, ?, ?, ?)",
-        (user_id, name, service, phone, "⌛ Kutilmoqda")
+        (user_id, name, service, phone, "⌛ To'lov tekshirilmoqda")
     )
     order_id = cursor.lastrowid
     conn.commit()
@@ -99,14 +105,12 @@ def send_welcome(message):
     bot.send_message(message.chat.id, "Assalomu aleykum! ProVera botiga xush kelibsiz!")
     bosh_menyu(message)
 
+# 🟢 KANALDA TUGMA BOSILGANDA ISHLAYDIGAN KOD
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
-    if call.data.startswith("set_"):
-        parts = call.data.split("_")
-        status_type = parts[1]
-        order_id = parts[2]
-        
-        new_status = "⚙️ Jarayonda" if status_type == "process" else "✅ Tayyor"
+    if call.data.startswith("accept_"):
+        order_id = call.data.split("_")[1]
+        new_status = "⚙️ Jarayonda (Admin qabul qildi)"
         
         conn = sqlite3.connect("orders.db")
         cursor = conn.cursor()
@@ -118,34 +122,47 @@ def callback_handler(call):
             cursor.execute("UPDATE orders SET status = ? WHERE id = ?", (new_status, order_id))
             conn.commit()
             
-            bot.answer_callback_query(call.id, f"Buyurtma holati '{new_status}' ga o'zgartirildi!")
+            # Kanal yozuvini yangilash (kim qabul qilganini ko'rsatish)
+            admin_user = call.from_user.first_name
+            current_time = datetime.now().strftime("%H:%M")
             
+            # Telegram foydalanuvchi profilini matndan qidirib olish
             raw_username = "Mavjud emas"
-            if "🤖 Telegram profili: " in call.message.text:
+            if "🤖 Telegram profili:" in call.message.caption:
                 try:
-                    raw_username = call.message.text.split("🤖 Telegram profili: ")[1].split("\n")[0]
+                    raw_username = call.message.caption.split("🤖 Telegram profili:")[1].split("\n")[0].strip()
                 except Exception:
                     pass
-            
-            updated_text = (
-                f"🔔 **BUYURTMA HAKIDA MA'LUMOT (ID: #{order_id})** 🔔\n\n"
+
+            updated_caption = (
+                f"✅ **BUYURTMA QABUL QILINDI (ID: #{order_id})** ✅\n\n"
                 f"👤 Mijoz: {name}\n"
-                f"💼 Xizmat turi: {service}\n"
+                f"💼 Xizmat: {service}\n"
                 f"📞 Telefon: {phone}\n"
                 f"🤖 Telegram profili: {raw_username}\n\n"
-                f"📌 **HOZIRGI HOLAT:** {new_status}"
+                f"🟢 **HOLAT:** Admin ({admin_user}) soat {current_time} da qabul qildi va ish jarayonga tushdi!"
             )
             
-            if status_type == "process":
-                next_inline = types.InlineKeyboardMarkup()
-                btn_ready = types.InlineKeyboardButton("✅ Tayyor deb belgilash", callback_data=f"set_ready_{order_id}")
-                next_inline.add(btn_ready)
-                bot.edit_message_text(updated_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=next_inline)
-            else:
-                bot.edit_message_text(updated_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=None)
+            # Kanaldagi post ostidagi tugmani o'zgartirish yoki yo'q qilish
+            bot.edit_message_caption(
+                chat_id=call.message.chat.id, 
+                message_id=call.message.message_id, 
+                caption=updated_caption, 
+                reply_markup=None
+            )
             
+            bot.answer_callback_query(call.id, f"Buyurtma qabul qilindi!")
+            
+            # MIJOZGA XABAR YUBORISH 📩
             try:
-                bot.send_message(user_id, f"📢 **Sizning buyurtmangiz holati yangilandi!**\n\n🆔 Buyurtma raqami: `#{order_id}`\n💼 Xizmat: {service}\n📌 Yangi holat: *{new_status}*")
+                user_msg = (
+                    f"🟢 **Xushxabar! Sizning buyurtmangiz admin tomonidan qabul qilindi!**\n\n"
+                    f"🆔 Buyurtma raqami: `#{order_id}`\n"
+                    f"💼 Xizmat: {service}\n"
+                    f"⚙️ Holati: *Hozirda jarayonda*\n\n"
+                    f"Dizaynerlarimiz ishni boshlashdi, tayyor bo'lishi bilan sizga xabar yuboramiz! 🚀"
+                )
+                bot.send_message(user_id, user_msg, parse_mode="Markdown")
             except Exception:
                 pass
         conn.close()
@@ -153,11 +170,64 @@ def callback_handler(call):
 @bot.message_handler(content_types=['contact'])
 def handle_contact(message):
     user_id = message.from_user.id
-    if user_id in user_data and user_data[user_id]['step'] == 3:
+    if user_id in user_data and user_data[user_id].get('step') == 3:
         user_data[user_id]['phone'] = message.contact.phone_number
-        finish_order(message, user_id)
+        goToPaymentStep(message, user_id)
     else:
         bot.send_message(message.chat.id, "⚠️ Hozir telefon raqam yuborish bosqichi emas.")
+
+# 📸 MIJOZ CHEKINI QABUL QILISH VA KANALGA YO'NALTIRISH
+@bot.message_handler(content_types=['photo'])
+def handle_photo(message):
+    user_id = message.from_user.id
+    if user_id in user_data and user_data[user_id].get('step') == 4:
+        name = user_data[user_id]['name']
+        service = user_data[user_id]['service']
+        phone = user_data[user_id]['phone']
+        
+        order_id = add_order(user_id, name, service, phone)
+        raw_username = message.from_user.username
+        username_text = f"@{raw_username}" if raw_username else "Mavjud emas"
+        
+        # Kanalga boradigan chiroyli xabar formati
+        kanal_matn = (
+            f"💰 **YANGI BUYURTMA + TO'LOV CHEKI (ID: #{order_id})** 💰\n\n"
+            f"👤 Mijoz: {name}\n"
+            f"💼 Xizmat: {service}\n"
+            f"📞 Telefon: {phone}\n"
+            f"🤖 Telegram profili: {username_text}\n\n"
+            f"📌 Kelib tushgan holati: ⌛ To'lov tekshirilmoqda\n"
+            f"⚖️ Shart: 50% avans bo'lsa, yakunda tiniq format berilmaydi!"
+        )
+        
+        # Kanalda chiqadigan "Qabul qilindi" tugmasi
+        kanal_inline = types.InlineKeyboardMarkup()
+        kanal_inline.add(
+            types.InlineKeyboardButton("🟢 Qabul qilindi (Jarayonga olish)", callback_data=f"accept_{order_id}")
+        )
+        
+        try:
+            # Kanalingizga rasmli chekni va ma'lumotlarni yuboradi
+            bot.send_photo(ADMIN_CHAT_ID, message.photo[-1].file_id, caption=kanal_matn, reply_markup=kanal_inline)
+            
+            # Mijozga tasdiq xabari
+            bot.send_message(
+                message.chat.id, 
+                f"🎉 **Rahmat! To'lov chekingiz qabul qilindi va maxsus buyurtmalar kanaliga yo'naltirildi.**\n\n"
+                f"Sizning buyurtma raqamingiz: `#{order_id}`\n"
+                f"Admin chekni ko'rib, buyurtmani tasdiqlashi bilan sizga avtomatik xabar boradi! 🚀",
+                reply_markup=None,
+                parse_mode="Markdown"
+            )
+        except Exception as e:
+            bot.send_message(message.chat.id, "⚠️ Tizimda xatolik yuz berdi. Bot kanalda admin ekanligini tekshiring.")
+            print(e)
+            
+        if user_id in user_data: 
+            del user_data[user_id]
+        bosh_menyu(message)
+    else:
+        bot.send_message(message.chat.id, "⚠️ Iltimos, faqat buyurtma to'lov bosqichida chek rasmini yuboring.")
 
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
@@ -170,7 +240,7 @@ def handle_text(message):
         bosh_menyu(message)
         return
 
-    if user_id in user_data and 'step' in user_data[user_id] and message.text != "✍️ Onlayn Buyurtma berish":
+    if user_id in user_data and 'step' in user_data[user_id] and user_data[user_id]['step'] in [1, 2, 3] and message.text != "✍️ Onlayn Buyurtma berish":
         process_order_steps(message)
         return
 
@@ -253,7 +323,10 @@ def handle_text(message):
     elif message.text == "ℹ️ Yordam":
         bot.send_message(message.chat.id, "Sizga qanday yordam bera olaman? Muammo bo'lsa biz bilan bog'laning: @ProVera_Design_Admin")
     else:
-        bot.send_message(message.chat.id, "⚠️ Pastdagi tayyor menyu tugmalaridan birini bosing. 👇")
+        if user_id in user_data and user_data[user_id].get('step') == 4:
+            bot.send_message(message.chat.id, "⚠️ Iltimos, to'lov chekini rasm (skrinshot) ko'rinishida yuboring!")
+        else:
+            bot.send_message(message.chat.id, "⚠️ Pastdagi tayyor menyu tugmalaridan birini bosing. 👇")
 
 def process_order_steps(message):
     user_id = message.from_user.id
@@ -284,7 +357,24 @@ def process_order_steps(message):
             bot.send_message(message.chat.id, "❌ Noto'g'ri raqam! To'g'ri formatda kiriting:")
             return
         user_data[user_id]['phone'] = clean_phone
-        finish_order(message, user_id)
+        goToPaymentStep(message, user_id)
+
+def goToPaymentStep(message, user_id):
+    user_data[user_id]['step'] = 4
+    markup_cancel = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    markup_cancel.add(types.KeyboardButton("❌ Buyurtmani bekor qilish"))
+    
+    payment_text = (
+        f"💳 **4-Bosqich: To'lov tizimi** 💳\n\n"
+        f"Buyurtmangizni tasdiqlash va ishni boshlashimiz uchun to'lovni amalga oshirishingiz lozim.\n\n"
+        f"Xohishingizga ko'ra **100% oldindan** yoki **50% avans** sifatida to'lov qilishingiz mumkin. "
+        f"⚠️ *Eslatma:* Agar 50% to'lov qilinsa, ish yakunlangach qolgan 50% to'lanmaguncha dizayn sizga original (tiniq) formatda berilmaydi.\n\n"
+        f"📌 **To'lov rekvizitlari:**\n"
+        f"💳 Karta raqam: `{KARTA_RAQAM}`\n"
+        f"👤 Karta egasi: *{KARTA_EGASI}*\n\n"
+        f"📥 To'lovni amalga oshirgach, **to'lov chekini (skrinshotini) mana shu yerga rasm ko'rinishida yuboring:**"
+    )
+    bot.send_message(message.chat.id, payment_text, parse_mode="Markdown", reply_markup=markup_cancel)
 
 def process_checking_id(message):
     user_id = message.from_user.id
@@ -303,38 +393,6 @@ def process_checking_id(message):
     else:
         bot.send_message(message.chat.id, f"❌ `#{order_id}` raqamli buyurtma topilmadi.")
     
-    if user_id in user_data: 
-        del user_data[user_id]
-    bosh_menyu(message)
-
-def finish_order(message, user_id):
-    name = user_data[user_id]['name']
-    service = user_data[user_id]['service']
-    phone = user_data[user_id]['phone']
-    
-    order_id = add_order(user_id, name, service, phone)
-    raw_username = message.from_user.username
-    username_text = f"@{raw_username}" if raw_username else "Mavjud emas"
-    
-    admin_matn = (
-        f"🔔 **YANGI BUYURTMA (ID: #{order_id})** 🔔\n\n"
-        f"👤 Mijoz: {name}\n"
-        f"💼 Xizmat: {service}\n"
-        f"📞 Telefon: {phone}\n"
-        f"🤖 Telegram: {username_text}\n"
-        f"📌 Holati: ⌛ Kutilmoqda"
-    )
-    
-    admin_inline = types.InlineKeyboardMarkup()
-    admin_inline.add(types.InlineKeyboardButton("⚙️ Jarayonda", callback_data=f"set_process_{order_id}"), types.InlineKeyboardButton("✅ Tayyor", callback_data=f"set_ready_{order_id}"))
-    
-    try:
-        bot.send_message(ADMIN_CHAT_ID, admin_matn, reply_markup=admin_inline)
-        bot.send_message(message.chat.id, f"🎉 Rahmat! Buyurtmangiz qabul qilindi. Sizning buyurtma raqamingiz: `#{order_id}`", parse_mode="Markdown")
-    except Exception as e:
-        bot.send_message(message.chat.id, "⚠️ Tizimda xatolik.")
-        print(e)
-        
     if user_id in user_data: 
         del user_data[user_id]
     bosh_menyu(message)
