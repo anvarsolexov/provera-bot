@@ -9,9 +9,17 @@ import sqlite3
 # 🌐 Render xatolik bermasligi uchun Flask veb-serveri
 server = Flask(__name__)
 
-# 🔑 TELEGRAM BOT TOKEN (YANGILANDI)
+# 🔑 TELEGRAM BOT TOKEN
 TOKEN = '8760453840:AAHkfjYO_xzHW7Igk1vZxE8gfoY6zYsj0Tg'
 bot = telebot.TeleBot(TOKEN)
+
+# 🛑 BEGONA REKLAMANI O'CHIRISH UCHUN MAJBURIY BUYRUQ 🛑
+# Bu buyruq eski dasturchining ulanishini (webhook) butunlay o'chirib tashlaydi!
+try:
+    bot.remove_webhook(drop_pending_updates=True)
+    print("Eski webhook va begona tizim ulanishi muvaffaqiyatli o'chirildi!")
+except Exception as e:
+    print(f"Webhookni o'chirishda xatolik: {e}")
 
 # 📂 PORTFOLIO KANALI LINKI
 PORTFOLIO_KANAL = "ProVera_Design_Portfolio"  
@@ -381,6 +389,6 @@ if __name__ == "__main__":
     # Botni alohida Thread ichida fonda ochamiz
     threading.Thread(target=run_bot, daemon=True).start()
     
-    # Asosiy portda Flask serverni ishga tushiramiz (Timed out bo'lmasligi uchun)
+    # Asosiy portda Flask serverni ishga tushiramiz
     port = int(os.environ.get("PORT", 5000))
     server.run(host="0.0.0.0", port=port)
