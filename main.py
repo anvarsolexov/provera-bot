@@ -32,7 +32,6 @@ def set_bot_commands():
     except Exception as e:
         print(f"Buyruqlarni o'rnatishda xatolik: {e}")
 
-# Buyruqlarni o'rnatishni ishga tushiramiz
 set_bot_commands()
 
 # 📂 PORTFOLIO KANALI LINKI
@@ -118,9 +117,10 @@ def send_welcome(message):
     bot.send_message(message.chat.id, "Assalomu aleykum! ProVera botiga xush kelibsiz!")
     bosh_menyu(message)
 
-# 🟢 KANALDA ADMIN TUGMANI BOSGANDA MIJOZGA HABAR BORISHI
+# 🟢 KANALDA ADMIN TUGMALARINI BOSGANDA ISHLAYDIGAN QISM
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
+    # 1. BUYURTMANI QABUL QILISH TUGMASI BOSILGANDA
     if call.data.startswith("accept_"):
         order_id = call.data.split("_")[1]
         new_status = "⚙️ Jarayonda (Admin qabul qildi)"
@@ -151,7 +151,7 @@ def callback_handler(call):
                 f"💼 Xizmat: {service}\n"
                 f"📞 Telefon: {phone}\n"
                 f"🤖 Telegram profili: {raw_username}\n\n"
-                f"🟢 **HOLAT:** Admin ({admin_user}) soat {current_time} da qabul qildi va ish jarayonga tushdi!"
+                f"🟢 **HOLAT:** Admin ({admin_user}) soat {current_time} da to'lovni tasdiqladi va ishni qabul qildi!"
             )
             
             bot.edit_message_caption(
@@ -160,16 +160,70 @@ def callback_handler(call):
                 caption=updated_caption, 
                 reply_markup=None
             )
-            
-            bot.answer_callback_query(call.id, f"Buyurtma qabul qilindi!")
+            bot.answer_callback_query(call.id, "Buyurtma jarayonga olindi!")
             
             try:
                 user_msg = (
-                    f"🟢 **Xushxabar! Sizning buyurtmangiz admin tomonidan qabul qilindi!**\n\n"
+                    f"🟢 **Xushxabar! Sizning buyurtmangiz admin tomonidan tasdiqlandi!**\n\n"
                     f"🆔 Buyurtma raqami: `#{order_id}`\n"
                     f"💼 Xizmat: {service}\n"
                     f"⚙️ Holati: *Hozirda jarayonda*\n\n"
                     f"Dizaynerlarimiz ishni boshlashdi, tayyor bo'lishi bilan sizga xabar yuboramiz! 🚀"
+                )
+                bot.send_message(user_id, user_msg, parse_mode="Markdown")
+            except Exception:
+                pass
+        conn.close()
+
+    # 2. TO'LOVNI RAD ETISH TUGMASI BOSILGANDA (SOXTA CHEKLAR UCHUN)
+    elif call.data.startswith("reject_"):
+        order_id = call.data.split("_")[1]
+        new_status = "❌ Rad etildi (To'lov tasdiqlanmadi)"
+        
+        conn = sqlite3.connect("orders.db")
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id, service, name, phone FROM orders WHERE id = ?", (order_id,))
+        res = cursor.fetchone()
+        
+        if res:
+            user_id, service, name, phone = res
+            cursor.execute("UPDATE orders SET status = ? WHERE id = ?", (new_status, order_id))
+            conn.commit()
+            
+            admin_user = call.from_user.first_name
+            current_time = datetime.now().strftime("%H:%M")
+            
+            raw_username = "Mavjud emas"
+            if "🤖 Telegram profili:" in call.message.caption:
+                try:
+                    raw_username = call.message.caption.split("🤖 Telegram profili:")[1].split("\n")[0].strip()
+                except Exception:
+                    pass
+
+            updated_caption = (
+                f"❌ **BUYURTMA RAD ETILDI (ID: #{order_id})** ❌\n\n"
+                f"👤 Mijoz: {name}\n"
+                f"💼 Xizmat: {service}\n"
+                f"📞 Telefon: {phone}\n"
+                f"🤖 Telegram profili: {raw_username}\n\n"
+                f"🔴 **HOLAT:** Admin ({admin_user}) soat {current_time} da to'lovni rad etdi (Chek soxta yoki pul tushmagan)!"
+            )
+            
+            bot.edit_message_caption(
+                chat_id=call.message.chat.id, 
+                message_id=call.message.message_id, 
+                caption=updated_caption, 
+                reply_markup=None
+            )
+            bot.answer_callback_query(call.id, "Buyurtma rad etildi!")
+            
+            try:
+                user_msg = (
+                    f"❌ **Ogohlantirish! Siz yuborgan to'lov cheki admin tomonidan tasdiqlanmadi.**\n\n"
+                    f"🆔 Buyurtma raqami: `#{order_id}`\n"
+                    f"💼 Xizmat: {service}\n"
+                    f"📌 Holati: *To'lov rad etildi*\n\n"
+                    f"⚠️ Iltimos, to'lovni qayta tekshirib, haqiqiy chekni yuboring yoki adminga murojaat qiling: @ProVera_Design_Admin"
                 )
                 bot.send_message(user_id, user_msg, parse_mode="Markdown")
             except Exception:
@@ -207,10 +261,11 @@ def handle_photo(message):
             f"⚖️ Shart: 50% avans bo'lsa, yakunda tiniq format berilmaydi!"
         )
         
-        kanal_inline = types.InlineKeyboardMarkup()
-        kanal_inline.add(
-            types.InlineKeyboardButton("🟢 Qabul qilindi (Jarayonga olish)", callback_data=f"accept_{order_id}")
-        )
+        # 📊 IKKITA TUGMA: QABUL QILISH VA RAD ETISH
+        kanal_inline = types.InlineKeyboardMarkup(row_width=1)
+        btn_accept = types.InlineKeyboardButton("🟢 Qabul qilindi (Jarayonga olish)", callback_data=f"accept_{order_id}")
+        btn_reject = types.InlineKeyboardButton("❌ Rad etildi (To'lov tasdiqlanmadi)", callback_data=f"reject_{order_id}")
+        kanal_inline.add(btn_accept, btn_reject)
         
         try:
             bot.send_photo(ADMIN_CHAT_ID, message.photo[-1].file_id, caption=kanal_matn, reply_markup=kanal_inline)
