@@ -13,7 +13,7 @@ app = Flask(__name__)
 def home():
     return "ProVera Bot Is Alive!", 200
 
-# 🔑 API TOKEN SOZLAMALARI
+# 🔑 API TOKEN VA SOZLAMALAR
 TOKEN = '8760453840:AAF7GPFBVMEg0jvxa8hsKfdlaee1VI8V1IA'
 bot = telebot.TeleBot(TOKEN)
 
@@ -33,8 +33,9 @@ KARTA_MA'LUMOTLARI = (
 )
 
 user_data = {}
-DB_PATH = "/tmp/orders.db"  # Render o'chirib yubormaydigan xavfsiz vaqtinchalik joy
+DB_PATH = "/tmp/orders.db"
 
+# 📦 BAZA BILAN ISHLASH
 def init_db():
     try:
         conn = sqlite3.connect(DB_PATH)
@@ -62,7 +63,7 @@ def add_order(user_id, name, service, phone):
         cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO orders (user_id, name, service, phone, status) VALUES (?, ?, ?, ?, ?)",
-            (user_id, name, service, phone, "⌛ Kutilmoqda")
+            (user_id, name, service, phone, "⏳ Kutilmoqda")
         )
         order_id = cursor.lastrowid
         conn.commit()
@@ -82,6 +83,7 @@ def get_order_status(order_id):
     except Exception:
         return None
 
+# 🔔 OBUNA TEKSHIRISH
 def check_sub(user_id):
     try:
         member = bot.get_chat_member(MAJBURIY_KANAL_ID, user_id)
@@ -89,6 +91,7 @@ def check_sub(user_id):
     except Exception:
         return True
 
+# 📱 MENYULAR
 def bosh_menyu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(types.KeyboardButton("💰 Xizmatlar va Narxlar"), types.KeyboardButton("📂 Portfolio (Bizning ishlar)"))
@@ -110,6 +113,7 @@ def send_welcome(message):
         inline_markup.add(types.InlineKeyboardButton(text="✅ Tekshirish", callback_data="check_subscription"))
         bot.send_message(message.chat.id, f"🚀 Botdan foydalanish uchun kanalimizga a'zo bo'ling:\n\n{MAJBURIY_KANAL_LINK}", reply_markup=inline_markup)
 
+# 🔄 CALLBACK SO'ROVLARI
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     if call.data == "check_subscription":
@@ -145,6 +149,7 @@ def callback_handler(call):
                 except Exception: pass
         conn.close()
 
+# 📞 KONTAKT QABUL QILISH
 @bot.message_handler(content_types=['contact'])
 def handle_contact(message):
     user_id = message.from_user.id
@@ -152,6 +157,7 @@ def handle_contact(message):
         user_data[user_id]['phone'] = message.contact.phone_number
         finish_order(message, user_id)
 
+# 📝 MATNLARNI QAYTA ISHLASH
 @bot.message_handler(content_types=['text'])
 def handle_text(message):
     user_id = message.from_user.id
@@ -187,9 +193,6 @@ def handle_text(message):
         m = types.ReplyKeyboardMarkup(resize_keyboard=True)
         m.add(types.KeyboardButton("❌ Buyurtmani bekor qilish"))
         bot.send_message(message.chat.id, "📝 Ism va familiyangizni kiriting:", reply_markup=m)
-    elif message.text == "🔍 Tekshirish (Provera)":
-        user_data[user_id] = {'action': 'checking_id'}
-        m = types.Reply
     elif message.text == "🔍 Tekshirish (Provera)":
         user_data[user_id] = {'action': 'checking_id'}
         m = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -248,7 +251,7 @@ def finish_order(message, user_id):
     if user_id in user_data: del user_data[user_id]
     bosh_menyu(message)
 
-# 🚀 BOTNI ALOHIDA OQIMDA ISHGA TUSHIRISH FUNKSIYASI
+# 🚀 BOTNI ISHGA TUSHIRISH FUNKSIYASI
 def run_bot():
     while True:
         try:
@@ -258,11 +261,9 @@ def run_bot():
             time.sleep(5)
 
 if __name__ == "__main__":
-    # 1. Telegram bot polling tizimini alohida orqa fonda (Thread) boshlaymiz
     bot_thread = threading.Thread(target=run_bot)
     bot_thread.daemon = True
     bot_thread.start()
     
-    # 2. Flask veb-serverini asosiy oqimda Render porti bilan ulaymiz (Render o'chirib qo'ymasligi uchun)
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
