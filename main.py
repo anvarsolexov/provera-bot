@@ -185,14 +185,14 @@ def handle_text(message):
         inline_ilova.add(btn_link)
         bot.send_message(message.chat.id, "ProVera rasmiy ilovasini yuklab olish uchun quyidagi tugmani bosing: 👇", reply_markup=inline_ilova)
         
-    # 2. XIZMATLAR VA NARXLAR BO'LIMI (YANGI PAKETLI TIZIM 🚀)
+    # 2. XIZMATLAR VA NARXLAR BO'LIMI
     elif message.text == "💰 Xizmatlar va Narxlar":
         narxlar_matni = (
             "✨ *ProVera Design — Professional Tariflar ro'yxati* ✨\n\n"
             "📦 *1. LOGO YARATISH (BRENDING)*\n"
-            "• *Ekonom:* 149 000 so'm — 1 ta oddiy variant, 3 kunda tayyor.\n"
-            "• *Standart (Tavsiya etiladi):* 390 000 so'm — 3 ta professional variant, 3D Mockup vizualizatsiyasi, barcha formatlarda (AI, PSD, PNG).\n"
-            "• *Premium:* 890 000 so'm — Cheksiz tuzatishlar, brendbuk (firma stili) va VIP yondashuv.\n\n"
+            "• *Ekonom:* 149 000 so'm — 1 ta oddiy variant, **1 kundan 3 kunda tayyor**.\n"
+            "• *Standart (Tavsiya etiladi):* 390 000 so'm — 3 ta professional variant, 3D Mockup vizualizatsiyasi, barcha formatlarda (AI, PSD, PNG), **2 kundan 6 kunda tayyor**.\n"
+            "• *Premium:* 890 000 so'm — Cheksiz tuzatishlar, brendbuk (firma stili) va VIP yondashuv, **2 kundan 6 kunda tayyor**.\n\n"
             "📱 *2. SMM DIZAYN (IJTIMOIY TARMOQLAR)*\n"
             "• *1 ta post dizayni:* 49 000 so'm\n"
             "• *1 ta Storiz / Reels muqovasi:* 29 000 so'm\n"
@@ -203,7 +203,9 @@ def handle_text(message):
             "• *Tashqi reklama (Banner, Bilbord):* 249 000 so'mdan\n\n"
             "🎁 *Kombi Taklif (Aksiya):*\n"
             "Logo (Standart) + Vizitka dizayni birgalikda buyurtma berilsa, 459 000 so'm emas, cheklamagan muddatga atigi **399 000 so'm**! 🔥\n\n"
-            "💡 _Barcha ishlar matbaaga tayyor holda (CMYK formatida) yuqori sifatda topshiriladi._"
+            "💡 _Barcha ishlar matbaaga tayyor holda (CMYK formatida) yuqori sifatda topshiriladi._\n\n"
+            "⚠️ **ESLATMA:**\n"
+            "Narxlar aniq qanchaligi va buyurtma tayyor bo'lish vaqtini to'liq aniqlashtirish uchun adminga murojaat qiling: 👉 @ProVera_Design_Admin"
         )
         bot.send_message(message.chat.id, narxlar_matni, parse_mode="Markdown")
         
