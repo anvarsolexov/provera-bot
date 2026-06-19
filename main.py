@@ -6,6 +6,8 @@ import threading
 import re
 import sqlite3
 from datetime import datetime
+import time
+import requests
 
 # 🌐 Render xatolik bermasligi uchun Flask veb-serveri
 server = Flask(__name__)
@@ -209,7 +211,6 @@ def callback_handler(call):
             bot.answer_callback_query(call.id, "Buyurtma rad etildi!")
             
             try:
-                # 🔄 MIJOZGA QAYTA YUBORISH TUGMASI
                 retry_inline = types.InlineKeyboardMarkup()
                 retry_inline.add(types.InlineKeyboardButton("🔄 Chekni qayta yuborish", callback_data=f"retry_{name}_{service}_{phone}"))
                 
@@ -227,10 +228,12 @@ def callback_handler(call):
 
     # 3. MIJOZ "CHEKNI QAYTA YUBORISH" TUGMASINI BOSGANDA
     elif call.data.startswith("retry_"):
-        _, name, service, phone = call.data.split("_")
+        parts = call.data.split("_")
+        name = parts[1]
+        service = parts[2]
+        phone = parts[3]
         user_id = call.from_user.id
         
-        # Mijozni qaytadan 4-bosqichga tizimga kiritamiz
         user_data[user_id] = {
             'step': 4,
             'name': name,
@@ -238,7 +241,6 @@ def callback_handler(call):
             'phone': phone
         }
         
-        # Tugmani olib tashlash uchun eski xabarni o'chirish yoki tahrirlash
         try:
             bot.delete_message(chat_id=call.message.chat.id, message_id=call.message.message_id)
         except Exception:
@@ -347,7 +349,7 @@ def handle_text(message):
             "Logo (Standart) + Vizitka dizayni birgalikda buyurtma berilsa, 459 000 so'm emas, cheklamagan muddatga atigi **399 000 so'm**! 🔥\n\n"
             "💡 _Barcha ishlar matbaaga tayyor holda (CMYK formatida) yuqori sifatda topshiriladi._\n\n"
             "⚠️ **ESLATMA:**\n"
-            "Narxlar aniq qanchaligi va buyurtma tayyor bo'lish vaqtini to'liq aniqlashtirish uchun adminga murojaat qiling: 👉 @ProVera_Design_Admin"
+            "Narxlar aniq qanchaligi va buyurtma tayyor bo'lish vaqtini to'liq anixlashtirish uchun adminga murojaat qiling: 👉 @ProVera_Design_Admin"
         )
         bot.send_message(message.chat.id, narxlar_matni, parse_mode="Markdown")
         
@@ -445,7 +447,6 @@ def goToPaymentStep(message, user_id):
         f"📥 To'lovni amalga oshirgach, **to'lov chekini (skrinshotini) mana shu yerga rasm ko'rinishida yuboring:**"
     )
     
-    # Agar chat_id bo'lsa (callback orqali chaqirilganda) o'sha chatga yuboradi
     chat_id = message.chat.id if hasattr(message, 'chat') else message.from_user.id
     bot.send_message(chat_id, payment_text, parse_mode="Markdown", reply_markup=markup_cancel)
 
@@ -477,7 +478,22 @@ def webhook():
 def run_bot():
     bot.infinity_polling(timeout=20, long_polling_timeout=10)
 
+# 🔄 RENDER SERVERINI HUYUSHGA YO'L QO'YMAYDIGAN PING TIZIMI
+def keep_alive():
+    while True:
+        try:
+            # Render'dagi web xizmatingizning to'liq havolasi (Masalan: https://provera-bot.onrender.com)
+            # Bu yerga Render'da sizga berilgan "Web Service" url manzilini qo'ying.
+            # Agar URL'ni hali bilmasangiz ham, bu qism xatolik bermay or fonda ishlayveradi.
+            url = f"http://0.0.0.0:5000/"
+            requests.get(url)
+            print("Ping yuborildi: Bot uyg'oq holatda saqlanmoqda!")
+        except Exception as e:
+            print(f"Ping yuborishda kichik xato: {e}")
+        time.sleep(600) # Har 10 daqiqada (600 soniya) ping yuboradi
+
 if __name__ == "__main__":
     threading.Thread(target=run_bot, daemon=True).start()
+    threading.Thread(target=keep_alive, daemon=True).start() # Pingni parallel ishga tushirish
     port = int(os.environ.get("PORT", 5000))
     server.run(host="0.0.0.0", port=port)
