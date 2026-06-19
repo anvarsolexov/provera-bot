@@ -12,7 +12,7 @@ import sqlite3
 server = Flask(__name__)
 
 # 🔑 YANGI API TOKEN
-TOKEN = '8760453840:AAFoZjg_2tYnNZRktZJomB6Ef3XrNiLabXQ'
+TOKEN = '8760453840:AAHkfjYO_xzHW7Igk1vZxE8gfoY6zYsj0Tg'
 bot = telebot.TeleBot(TOKEN)
 
 # 📂 PORTFOLIO KANALI
