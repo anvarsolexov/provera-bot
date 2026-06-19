@@ -110,7 +110,7 @@ def xizmatlar_menyusi(message):
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
     user_id = message.from_user.id
-    if user_id in user_data: 
+    if user_id in user_data:
         del user_data[user_id]
         
     if check_sub(user_id):
@@ -127,9 +127,9 @@ def send_welcome(message):
 def callback_handler(call):
     if call.data == "check_subscription":
         if check_sub(call.from_user.id):
-            try: 
+            try:
                 bot.delete_message(call.message.chat.id, call.message.message_id)
-            except Exception: 
+            except Exception:
                 pass
             bot.send_message(call.message.chat.id, "🎉 Tasdiqlandi!")
             bosh_menyu(call.message)
@@ -153,14 +153,14 @@ def callback_handler(call):
             bot.answer_callback_query(call.id, "Yangilandi!")
             
             if status_type == "payment":
-                try: 
+                try:
                     bot.send_message(user_id, f"🎉 **#{order_id}** buyurtmangiz qabul qilindi.\n\n{KARTA_MA'LUMOTLARI}", parse_mode="Markdown")
-                except Exception: 
+                except Exception:
                     pass
             else:
-                try: 
+                try:
                     bot.send_message(user_id, f"📢 Holat yangilandi!\n🆔 ID: #{order_id}\n📌 Status: *{new_status}*", parse_mode="Markdown")
-                except Exception: 
+                except Exception:
                     pass
         conn.close()
 
@@ -178,7 +178,7 @@ def handle_text(message):
     user_id = message.from_user.id
 
     if message.text == "❌ Buyurtmani bekor qilish":
-        if user_id in user_data: 
+        if user_id in user_data:
             del user_data[user_id]
         bot.send_message(message.chat.id, "❌ Buyurtma bekor qilindi.")
         bosh_menyu(message)
@@ -192,7 +192,6 @@ def handle_text(message):
         process_checking_id(message)
         return
 
-    # KENGAYTIRILGAN MATN FILTRLARI
     if message.text == "💰 Xizmatlar va Narxlar":
         xizmatlar_menyusi(message)
         
@@ -269,52 +268,4 @@ def process_order_steps(message):
 # 🔍 ID ORQALI BUYURTMANI TEKSHIRISH
 def process_checking_id(message):
     user_id = message.from_user.id
-    if message.text.isdigit():
-        res = get_order_status(int(message.text))
-        if res: 
-            bot.send_message(message.chat.id, f"🆔 Buyurtma ID: #{message.text}\n💼 Tanlangan xizmat: {res[1]}\n📌 Joriy holati: *{res[0]}*", parse_mode="Markdown")
-        else: 
-            bot.send_message(message.chat.id, "❌ Tizimdan bunday raqamli buyurtma topilmadi.")
-    if user_id in user_data: 
-        del user_data[user_id]
-    bosh_menyu(message)
-
-# 🏁 BUYURTMANI YAKUNLASH
-def finish_order(message, user_id):
-    name, service, phone = user_data[user_id]['name'], user_data[user_id]['service'], user_data[user_id]['phone']
-    order_id = add_order(user_id, name, service, phone)
-    username = f"@{message.from_user.username}" if message.from_user.username else "Mavjud emas"
-    
-    admin_matn = f"🔔 **YANGI BUYURTMA (ID: #{order_id})**\n\n👤 Mijoz: {name}\n💼 Xizmat: {service}\n📞 Tel: {phone}\n🤖 Profil: {username}"
-    m = types.InlineKeyboardMarkup()
-    m.add(
-        types.InlineKeyboardButton("⚙️ Jarayonda", callback_data=f"set_process_{order_id}"), 
-        types.InlineKeyboardButton("⏳ To'lov kutilmoqda", callback_data=f"set_payment_{order_id}"), 
-        types.InlineKeyboardButton("✅ Tayyor", callback_data=f"set_ready_{order_id}")
-    )
-    
-    try: 
-        bot.send_message(ADMIN_CHAT_ID, admin_matn, reply_markup=m)
-    except Exception: 
-        pass
-    bot.send_message(message.chat.id, f"🎉 Rahmat! Buyurtmangiz qabul qilindi. Sizning buyurtma raqamingiz: `#{order_id}`.", parse_mode="Markdown")
-    if user_id in user_data: 
-        del user_data[user_id]
-    bosh_menyu(message)
-
-# 🚀 BOTNI ISHGA TUSHIRISH FUNKSIYASI
-def run_bot():
-    while True:
-        try:
-            bot.polling(none_stop=True, interval=1, timeout=20)
-        except Exception as e:
-            print(f"Polling xatosi: {e}")
-            time.sleep(5)
-
-if __name__ == "__main__":
-    bot_thread = threading.Thread(target=run_bot)
-    bot_thread.daemon = True
-    bot_thread.start()
-    
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    if message
