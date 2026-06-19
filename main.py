@@ -1,8 +1,13 @@
 import telebot
 from telebot import types
 import os
+from flask import Flask
+import threading
 import re
 import sqlite3
+
+# Render talab qiladigan port va veb-server qismi (Timed out bo'lmasligi uchun)
+server = Flask(__name__)
 
 # 🔑 YANGI API TOKEN
 TOKEN = '8760453840:AAFoZjg_2tYnNZRktZJomB6Ef3XrNiLabXQ'
@@ -307,6 +312,15 @@ def finish_order(message, user_id):
         del user_data[user_id]
     bosh_menyu(message)
 
-if __name__ == "__main__":
-    print("Bot ishga tushmoqda...")
+@server.route('/')
+def webhook():
+    return "Bot is running", 200
+
+def run_bot():
     bot.infinity_polling(timeout=20, long_polling_timeout=10)
+
+if __name__ == "__main__":
+    # Botni alohida oqimda (Thread) ochamiz, Flask esa asosiy portda ishlaydi
+    threading.Thread(target=run_bot, daemon=True).start()
+    port = int(os.environ.get("PORT", 5000))
+    server.run(host="0.0.0.0", port=port)
