@@ -10,8 +10,8 @@ from datetime import datetime
 # 🌐 Render xatolik bermasligi uchun Flask veb-serveri
 server = Flask(__name__)
 
-# 🔑 TELEGRAM BOT TOKEN
-TOKEN = '8760453840:AAHkfjYO_xzHW7Igk1vZxE8gfoY6zYsj0Tg'
+# 🔑 YANGI VA TOZA TELEGRAM BOT TOKEN
+TOKEN = '8923702378:AAF-6fjEd4Lw705wH7B9AZggmIWcftbvhA8'
 bot = telebot.TeleBot(TOKEN)
 
 # 🛑 REKLAMANI CHIQARMASLIK UCHUN WEBHOOK TOZALAGICH
@@ -25,7 +25,7 @@ except Exception as e:
 PORTFOLIO_KANAL = "ProVera_Design_Portfolio"  
 
 # 📢 BUYURTMALAR TUSHADIGAN KANAL ID (YOKI @KANAL_LINKI)
-# Bot ushbu kanalda administrator bo'lishi shart!
+# Diqqat: Yangi botingizni ushbu kanalda administrator (muloqotchi) qilib qo'shib, xabar yozish huquqini bering!
 ADMIN_CHAT_ID = "-1003997246734"  
 
 # 💳 TO'LOV MA'LUMOTLARI
@@ -105,7 +105,7 @@ def send_welcome(message):
     bot.send_message(message.chat.id, "Assalomu aleykum! ProVera botiga xush kelibsiz!")
     bosh_menyu(message)
 
-# 🟢 KANALDA TUGMA BOSILGANDA ISHLAYDIGAN KOD
+# 🟢 KANALDA ADMIN TUGMANI BOSGANDA MIJOZGA HABAR BORISHI
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
     if call.data.startswith("accept_"):
@@ -126,7 +126,6 @@ def callback_handler(call):
             admin_user = call.from_user.first_name
             current_time = datetime.now().strftime("%H:%M")
             
-            # Telegram foydalanuvchi profilini matndan qidirib olish
             raw_username = "Mavjud emas"
             if "🤖 Telegram profili:" in call.message.caption:
                 try:
@@ -143,7 +142,7 @@ def callback_handler(call):
                 f"🟢 **HOLAT:** Admin ({admin_user}) soat {current_time} da qabul qildi va ish jarayonga tushdi!"
             )
             
-            # Kanaldagi post ostidagi tugmani o'zgartirish yoki yo'q qilish
+            # Kanaldagi post ostidagi tugmani yo'qotib yangilash
             bot.edit_message_caption(
                 chat_id=call.message.chat.id, 
                 message_id=call.message.message_id, 
@@ -153,7 +152,7 @@ def callback_handler(call):
             
             bot.answer_callback_query(call.id, f"Buyurtma qabul qilindi!")
             
-            # MIJOZGA XABAR YUBORISH 📩
+            # MIJOZGA AVTOMATIK XABAR YUBORISH 📩
             try:
                 user_msg = (
                     f"🟢 **Xushxabar! Sizning buyurtmangiz admin tomonidan qabul qilindi!**\n\n"
@@ -176,7 +175,7 @@ def handle_contact(message):
     else:
         bot.send_message(message.chat.id, "⚠️ Hozir telefon raqam yuborish bosqichi emas.")
 
-# 📸 MIJOZ CHEKINI QABUL QILISH VA KANALGA YO'NALTIRISH
+# 📸 MIJOZ CHEKINI QABUL QILISH VA KANALGA INLINE TUGMA BILAN YO'NALTIRISH
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
     user_id = message.from_user.id
@@ -189,7 +188,7 @@ def handle_photo(message):
         raw_username = message.from_user.username
         username_text = f"@{raw_username}" if raw_username else "Mavjud emas"
         
-        # Kanalga boradigan chiroyli xabar formati
+        # Kanalga boradigan xabar formati
         kanal_matn = (
             f"💰 **YANGI BUYURTMA + TO'LOV CHEKI (ID: #{order_id})** 💰\n\n"
             f"👤 Mijoz: {name}\n"
@@ -200,14 +199,13 @@ def handle_photo(message):
             f"⚖️ Shart: 50% avans bo'lsa, yakunda tiniq format berilmaydi!"
         )
         
-        # Kanalda chiqadigan "Qabul qilindi" tugmasi
+        # Kanalda chiqadigan inline tugma
         kanal_inline = types.InlineKeyboardMarkup()
         kanal_inline.add(
             types.InlineKeyboardButton("🟢 Qabul qilindi (Jarayonga olish)", callback_data=f"accept_{order_id}")
         )
         
         try:
-            # Kanalingizga rasmli chekni va ma'lumotlarni yuboradi
             bot.send_photo(ADMIN_CHAT_ID, message.photo[-1].file_id, caption=kanal_matn, reply_markup=kanal_inline)
             
             # Mijozga tasdiq xabari
@@ -220,7 +218,7 @@ def handle_photo(message):
                 parse_mode="Markdown"
             )
         except Exception as e:
-            bot.send_message(message.chat.id, "⚠️ Tizimda xatolik yuz berdi. Bot kanalda admin ekanligini tekshiring.")
+            bot.send_message(message.chat.id, "⚠️ Tizimda xatolik yuz berdi. Yangi bot kanalda admin ekanligini tekshiring.")
             print(e)
             
         if user_id in user_data: 
@@ -248,14 +246,12 @@ def handle_text(message):
         process_checking_id(message)
         return
 
-    # 1. ILOVA YUKLAB OLISH BO'LIMI
     if message.text == "📱 Ilovani yuklab olish":
         inline_ilova = types.InlineKeyboardMarkup()
         btn_link = types.InlineKeyboardButton("📥 Yuklab olish (Google Drive)", url="https://share.google/yYkrudNSAmI7V...")
         inline_ilova.add(btn_link)
         bot.send_message(message.chat.id, "ProVera rasmiy ilovasini yuklab olish uchun quyidagi tugmani bosing: 👇", reply_markup=inline_ilova)
         
-    # 2. XIZMATLAR VA NARXLAR BO'LIMI
     elif message.text == "💰 Xizmatlar va Narxlar":
         narxlar_matni = (
             "✨ *ProVera Design — Professional Tariflar ro'yxati* ✨\n\n"
@@ -279,7 +275,6 @@ def handle_text(message):
         )
         bot.send_message(message.chat.id, narxlar_matni, parse_mode="Markdown")
         
-    # 3. PORTFOLIO BO'LIMI
     elif message.text == "📂 Portfolio (Bizning ishlar)":
         inline_portfolio = types.InlineKeyboardMarkup(row_width=1)
         btn_kanal = types.InlineKeyboardButton(text="🎨 Portfolioni ko'rish (Kanal)", url=f"https://t.me/{PORTFOLIO_KANAL}")
@@ -291,7 +286,6 @@ def handle_text(message):
         )
         bot.send_message(message.chat.id, portfolio_matni, parse_mode="Markdown", reply_markup=inline_portfolio)
         
-    # 4. BUYURTMA BERISH VA ALOQA BO'LIMI
     elif message.text == "📞 Buyurtma berish / Aloqa":
         markup_aloqa = types.ReplyKeyboardMarkup(resize_keyboard=True)
         btn_new_order = types.KeyboardButton("✍️ Onlayn Buyurtma berish")
