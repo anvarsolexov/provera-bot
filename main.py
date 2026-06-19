@@ -21,11 +21,24 @@ try:
 except Exception as e:
     print(f"Webhookni o'chirishda xatolik: {e}")
 
+# ⚙️ BOT CHUBURQLARINI (COMMANDS) KOD ORQALI AVTOMATIK O'RNATISH
+def set_bot_commands():
+    try:
+        commands = [
+            types.BotCommand("start", "Botni qayta ishga tushirish (Bosh menyu)")
+        ]
+        bot.set_my_commands(commands)
+        print("Bot buyruqlari muvaffaqiyatli o'rnatildi!")
+    except Exception as e:
+        print(f"Buyruqlarni o'rnatishda xatolik: {e}")
+
+# Buyruqlarni o'rnatishni ishga tushiramiz
+set_bot_commands()
+
 # 📂 PORTFOLIO KANALI LINKI
 PORTFOLIO_KANAL = "ProVera_Design_Portfolio"  
 
 # 📢 BUYURTMALAR TUSHADIGAN KANAL ID (YOKI @KANAL_LINKI)
-# Diqqat: Yangi botingizni ushbu kanalda administrator (muloqotchi) qilib qo'shib, xabar yozish huquqini bering!
 ADMIN_CHAT_ID = "-1003997246734"  
 
 # 💳 TO'LOV MA'LUMOTLARI
@@ -122,7 +135,6 @@ def callback_handler(call):
             cursor.execute("UPDATE orders SET status = ? WHERE id = ?", (new_status, order_id))
             conn.commit()
             
-            # Kanal yozuvini yangilash (kim qabul qilganini ko'rsatish)
             admin_user = call.from_user.first_name
             current_time = datetime.now().strftime("%H:%M")
             
@@ -142,7 +154,6 @@ def callback_handler(call):
                 f"🟢 **HOLAT:** Admin ({admin_user}) soat {current_time} da qabul qildi va ish jarayonga tushdi!"
             )
             
-            # Kanaldagi post ostidagi tugmani yo'qotib yangilash
             bot.edit_message_caption(
                 chat_id=call.message.chat.id, 
                 message_id=call.message.message_id, 
@@ -152,7 +163,6 @@ def callback_handler(call):
             
             bot.answer_callback_query(call.id, f"Buyurtma qabul qilindi!")
             
-            # MIJOZGA AVTOMATIK XABAR YUBORISH 📩
             try:
                 user_msg = (
                     f"🟢 **Xushxabar! Sizning buyurtmangiz admin tomonidan qabul qilindi!**\n\n"
@@ -175,7 +185,6 @@ def handle_contact(message):
     else:
         bot.send_message(message.chat.id, "⚠️ Hozir telefon raqam yuborish bosqichi emas.")
 
-# 📸 MIJOZ CHEKINI QABUL QILISH VA KANALGA INLINE TUGMA BILAN YO'NALTIRISH
 @bot.message_handler(content_types=['photo'])
 def handle_photo(message):
     user_id = message.from_user.id
@@ -188,7 +197,6 @@ def handle_photo(message):
         raw_username = message.from_user.username
         username_text = f"@{raw_username}" if raw_username else "Mavjud emas"
         
-        # Kanalga boradigan xabar formati
         kanal_matn = (
             f"💰 **YANGI BUYURTMA + TO'LOV CHEKI (ID: #{order_id})** 💰\n\n"
             f"👤 Mijoz: {name}\n"
@@ -199,7 +207,6 @@ def handle_photo(message):
             f"⚖️ Shart: 50% avans bo'lsa, yakunda tiniq format berilmaydi!"
         )
         
-        # Kanalda chiqadigan inline tugma
         kanal_inline = types.InlineKeyboardMarkup()
         kanal_inline.add(
             types.InlineKeyboardButton("🟢 Qabul qilindi (Jarayonga olish)", callback_data=f"accept_{order_id}")
@@ -208,7 +215,6 @@ def handle_photo(message):
         try:
             bot.send_photo(ADMIN_CHAT_ID, message.photo[-1].file_id, caption=kanal_matn, reply_markup=kanal_inline)
             
-            # Mijozga tasdiq xabari
             bot.send_message(
                 message.chat.id, 
                 f"🎉 **Rahmat! To'lov chekingiz qabul qilindi va maxsus buyurtmalar kanaliga yo'naltirildi.**\n\n"
