@@ -6,24 +6,22 @@ import threading
 import re
 import sqlite3
 from datetime import datetime
-import time
-import requests
 
-# 🌐 Render xatolik bermasligi uchun Flask veb-serveri
+# 🌐 Render uchun Flask veb-serveri
 server = Flask(__name__)
 
-# 🔑 YANGI VA TOZA TELEGRAM BOT TOKEN
+# 🔑 TELEGRAM BOT TOKEN
 TOKEN = '8923702378:AAF-6fjEd4Lw705wH7B9AZggmIWcftbvhA8'
 bot = telebot.TeleBot(TOKEN)
 
-# 🛑 REKLAMANI CHIQARMASLIK UCHUN WEBHOOK TOZALAGICH
+# 🛑 WEBHOOK TOZALAGICH
 try:
     bot.remove_webhook(drop_pending_updates=True)
     print("Eski ulanishlar muvaffaqiyatli tozalandi!")
 except Exception as e:
     print(f"Webhookni o'chirishda xatolik: {e}")
 
-# ⚙️ BOT CHUBURQLARINI (COMMANDS) KOD ORQALI AVTOMATIK O'RNATISH
+# ⚙️ BOT BUYRUQLARINI O'RNATISH
 def set_bot_commands():
     try:
         commands = [
@@ -39,17 +37,16 @@ set_bot_commands()
 # 📂 PORTFOLIO KANALI LINKI
 PORTFOLIO_KANAL = "ProVera_Design_Portfolio"  
 
-# 📢 BUYURTMALAR TUSHADIGAN KANAL ID (YOKI @KANAL_LINKI)
+# 📢 BUYURTMALAR TUSHADIGAN KANAL ID
 ADMIN_CHAT_ID = "-1003997246734"  
 
 # 💳 TO'LOV MA'LUMOTLARI
 KARTA_RAQAM = "5614 6818 5637 1004"
 KARTA_EGASI = "Anvar Solexov"
 
-# Foydalanuvchilar bosqichlarini saqlash uchun lug'at
 user_data = {}
 
-# 🗄 MA'LUMOTLAR BAZASINI YARATISH VA SOZLASH
+# 🗄 MA'LUMOTLAR BAZASI
 def init_db():
     conn = sqlite3.connect("orders.db")
     cursor = conn.cursor()
@@ -119,11 +116,9 @@ def send_welcome(message):
     bot.send_message(message.chat.id, "Assalomu aleykum! ProVera botiga xush kelibsiz!")
     bosh_menyu(message)
 
-# 🟢 CALL BACK REAKSIYALARI (ADMIN VA MIJOZ TUGMALARI)
+# 🟢 CALL BACK REAKSIYALARI
 @bot.callback_query_handler(func=lambda call: True)
 def callback_handler(call):
-    
-    # 1. ADMIN BUYURTMANI QABUL QILGANDA
     if call.data.startswith("accept_"):
         order_id = call.data.split("_")[1]
         new_status = "⚙️ Jarayonda (Admin qabul qildi)"
@@ -173,7 +168,6 @@ def callback_handler(call):
                 pass
         conn.close()
 
-    # 2. ADMIN TO'LOVNI RAD ETGANDA (SOXTA CHEK HOLATI)
     elif call.data.startswith("reject_"):
         order_id = call.data.split("_")[1]
         new_status = "❌ Rad etildi (To'lov tasdiqlanmadi)"
@@ -226,7 +220,6 @@ def callback_handler(call):
                 pass
         conn.close()
 
-    # 3. MIJOZ "CHEKNI QAYTA YUBORISH" TUGMASINI BOSGANDA
     elif call.data.startswith("retry_"):
         parts = call.data.split("_")
         name = parts[1]
@@ -478,22 +471,11 @@ def webhook():
 def run_bot():
     bot.infinity_polling(timeout=20, long_polling_timeout=10)
 
-# 🔄 RENDER SERVERINI HUYUSHGA YO'L QO'YMAYDIGAN PING TIZIMI
-def keep_alive():
-    while True:
-        try:
-            # Render'dagi web xizmatingizning to'liq havolasi (Masalan: https://provera-bot.onrender.com)
-            # Bu yerga Render'da sizga berilgan "Web Service" url manzilini qo'ying.
-            # Agar URL'ni hali bilmasangiz ham, bu qism xatolik bermay or fonda ishlayveradi.
-            url = f"http://0.0.0.0:5000/"
-            requests.get(url)
-            print("Ping yuborildi: Bot uyg'oq holatda saqlanmoqda!")
-        except Exception as e:
-            print(f"Ping yuborishda kichik xato: {e}")
-        time.sleep(600) # Har 10 daqiqada (600 soniya) ping yuboradi
-
 if __name__ == "__main__":
+    init_db()
+    # Botni alohida oqimda yengilgina ishga tushiramiz
     threading.Thread(target=run_bot, daemon=True).start()
-    threading.Thread(target=keep_alive, daemon=True).start() # Pingni parallel ishga tushirish
+    
+    # Render portni avtomatik beradi
     port = int(os.environ.get("PORT", 5000))
     server.run(host="0.0.0.0", port=port)
