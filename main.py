@@ -11,7 +11,7 @@ from datetime import datetime
 server = Flask(__name__)
 
 # 🔑 TELEGRAM BOT TOKEN
-TOKEN = '8923702378:AAF-6fjEd4Lw705wH7B9AZggmIWcftbvhA8'
+TOKEN = '8923702378:AAEAqjs2hxkFEtgzHPE0tBUGLt0h7C36MrY'
 bot = telebot.TeleBot(TOKEN)
 
 # 🛑 WEBHOOK TOZALAGICH
