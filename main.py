@@ -11,7 +11,7 @@ import threading
 server = Flask(__name__)
 
 # 🔑 TOKEN (Agar BotFather'dan yangilasangiz, yangisini mana shu yerga qo'ying)
-TOKEN = '8923702378:AAEAqjs2hxkFEtgzHPE0tBUGLt0h7C36MrY'
+TOKEN = '8923702378:AAHPlRF3qSsT7jNbPmqbHFxSc74fbW1yuX8'
 bot = telebot.TeleBot(TOKEN)
 
 # ⚙️ KONFIGURATSIYA
