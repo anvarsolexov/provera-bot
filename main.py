@@ -3,8 +3,14 @@ from telebot import types
 import sqlite3
 from datetime import datetime
 import re
+import os
+from flask import Flask
+import threading
 
-# 🔑 TOKEN
+# 🌐 Render uchun Flask veb-serveri
+server = Flask(__name__)
+
+# 🔑 TOKEN (Agar BotFather'dan yangilasangiz, yangisini mana shu yerga qo'ying)
 TOKEN = '8923702378:AAEAqjs2hxkFEtgzHPE0tBUGLt0h7C36MrY'
 bot = telebot.TeleBot(TOKEN)
 
@@ -43,7 +49,9 @@ def bosh_menyu(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     markup.add(types.KeyboardButton("💰 Xizmatlar va Narxlar"), types.KeyboardButton("📂 Portfolio"))
     markup.add(types.KeyboardButton("📞 Buyurtma berish"), types.KeyboardButton("🔍 Buyurtmani tekshirish"))
-    bot.send_message(message.chat.id, "ProVera Dizayn markaziga xush kelibsiz!", reply_markup=markup)
+    
+    chat_id = message.chat.id if hasattr(message, 'chat') else message.from_user.id
+    bot.send_message(chat_id, "ProVera Dizayn markaziga xush kelibsiz!", reply_markup=markup)
 
 # 💠 XIZMATLAR (Pog‘onali menyu)
 @bot.message_handler(func=lambda message: message.text == "💰 Xizmatlar va Narxlar")
@@ -89,6 +97,18 @@ def start_order(message):
 @bot.message_handler(content_types=['text', 'contact', 'photo'])
 def handle_all(message):
     user_id = message.from_user.id
+    
+    if message.text == "/start":
+        if user_id in user_data: del user_data[user_id]
+        bosh_menyu(message)
+        return
+        
+    elif message.text == "📂 Portfolio":
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("🎨 Ko'rish", url=f"https://t.me/{PORTFOLIO_KANAL}"))
+        bot.send_message(message.chat.id, "Bizning ishlar:", reply_markup=markup)
+        return
+
     if user_id in user_data:
         step = user_data[user_id].get('step')
         if step == 1:
@@ -105,19 +125,26 @@ def handle_all(message):
             user_data[user_id]['step'] = 4
             bot.send_message(message.chat.id, f"💳 4-Bosqich: To'lovni {KARTA_RAQAM} ga qiling va chekni yuboring.")
         elif step == 4 and message.photo:
-            # Buyurtmani admin kanalga yuborish
             order_id = add_order(user_id, user_data[user_id]['name'], user_data[user_id]['service'], user_data[user_id]['phone'])
-            caption = f"💰 YANGI BUYURTMA ID: #{order_id}\nMijoz: {user_data[user_id]['name']}\nXizmat: {user_data[user_id]['service']}"
+            caption = f"💰 YANGI BUYURTMA ID: #{order_id}\nMijoz: {user_data[user_id]['name']}\nXizmat: {user_data[user_id]['service']}\nTel: {user_data[user_id]['phone']}"
             bot.send_photo(ADMIN_CHAT_ID, message.photo[-1].file_id, caption=caption)
             bot.send_message(message.chat.id, "✅ Buyurtmangiz qabul qilindi!")
             del user_data[user_id]
             bosh_menyu(message)
-    elif message.text == "/start":
-        bosh_menyu(message)
-    elif message.text == "📂 Portfolio":
-        markup = types.InlineKeyboardMarkup()
-        markup.add(types.InlineKeyboardButton("🎨 Ko'rish", url=f"https://t.me/{PORTFOLIO_KANAL}"))
-        bot.send_message(message.chat.id, "Bizning ishlar:", reply_markup=markup)
+
+# 🌐 Flask yo'nalishi (Render o'chib qolmasligi uchun)
+@server.route('/')
+def webhook():
+    return "Bot is alive", 200
+
+def run_bot():
+    bot.infinity_polling(timeout=20, long_polling_timeout=10)
 
 if __name__ == "__main__":
-    bot.infinity_polling()
+    init_db()
+    # Bot alohida thread'da (oqimda) fonda ishlaydi
+    threading.Thread(target=run_bot, daemon=True).start()
+    
+    # Flask asosiy oqimda portni eshitib turadi
+    port = int(os.environ.get("PORT", 5000))
+    server.run(host="0.0.0.0", port=port)
